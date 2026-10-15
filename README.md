@@ -24,15 +24,27 @@ The Laravel 5+ Package for Indian Payment Gateways. Currently supported gateway:
     php artisan vendor:publish --provider="Softon\Indipay\IndipayServiceProvider" 
 </pre></code>
 
-<b>Step 5:</b> Modify the app\Http\Kernel.php to use the new Middleware. 
+<b>Step 5:</b> Use the new Middleware for the web routes.
 This is required so as to avoid CSRF verification on the Response Url from the payment gateways.
 <b>You may adjust the routes in the config file config/indipay.php to disable CSRF on your gateways response routes.</b>
 
-> NOTE: You may also use the new `VerifyCsrfToken` middleware and add the routes in the `$except` array.
-
+<b>Laravel 10 and below:</b> in app\Http\Kernel.php, change
 <pre><code>App\Http\Middleware\VerifyCsrfToken::class,</code></pre>
 to
 <pre><code>App\Http\Middleware\VerifyCsrfMiddleware::class,</code></pre>
+
+> NOTE: You may also use the new `VerifyCsrfToken` middleware and add the routes in the `$except` array.
+
+<b>Laravel 11 and above:</b> these versions have no app\Http\Kernel.php. Swap the middleware in bootstrap/app.php instead:
+```php
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->web(replace: [
+        \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class => \App\Http\Middleware\VerifyCsrfMiddleware::class,
+    ]);
+})
+```
+
+> NOTE: You may instead skip the published middleware and list the response routes with `$middleware->validateCsrfTokens(except: ['indipay/response']);`
 
 <h2>Usage</h2>
 
