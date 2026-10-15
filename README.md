@@ -1,5 +1,12 @@
 # IndiPay
 
+[![Tests](https://github.com/RenderbitTechnologies/indipay/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/RenderbitTechnologies/indipay/actions/workflows/tests.yml)
+[![PHP](https://img.shields.io/badge/PHP-8.1%E2%80%938.4-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![Laravel](https://img.shields.io/badge/Laravel-5.6%E2%80%9312-FF2D20?logo=laravel&logoColor=white)](https://laravel.com/)
+[![Guzzle](https://img.shields.io/badge/Guzzle-5%E2%80%937-4B8BBE)](https://docs.guzzlephp.org/)
+[![PHPUnit](https://img.shields.io/badge/PHPUnit-10%20%7C%2011-3C9CD7)](https://phpunit.de/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 A Laravel package for Indian payment gateways.
 
 | Gateway | Name to use in code | Verify support |
