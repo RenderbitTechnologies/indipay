@@ -28,6 +28,10 @@ class EBSGatewayTest extends TestCase
     public function test_endpoint_is_the_same_in_both_modes()
     {
         $this->assertSame('https://secure.ebs.in/pg/ma/payment/request', (new EBSGateway())->getEndPoint());
+
+        Config::set('indipay.testMode', false);
+
+        $this->assertSame('https://secure.ebs.in/pg/ma/payment/request', (new EBSGateway())->getEndPoint());
     }
 
     public function test_mode_follows_test_mode_config()
