@@ -10,12 +10,6 @@
             <directory suffix="Test.php">./tests/</directory>
         </testsuite>
     </testsuites>
-    <groups>
-        <exclude>
-            <!-- Tests that describe confirmed bugs. Run them with the known-bugs group option. -->
-            <group>known-bugs</group>
-        </exclude>
-    </groups>
     <source>
         <include>
             <directory>./src</directory>
