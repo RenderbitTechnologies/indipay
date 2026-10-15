@@ -3,7 +3,6 @@
 namespace Softon\Indipay\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Group;
 use Softon\Indipay\Gateways\CCAvenueGateway;
 use Softon\Indipay\Gateways\CitrusGateway;
 use Softon\Indipay\Gateways\EBSGateway;
@@ -53,10 +52,8 @@ class IndipayTest extends TestCase
         $this->assertSame($gateway, $this->getProtected($indipay, 'gateway'));
     }
 
-    #[Group('known-bugs')]
     public function test_gateway_switches_to_paytm()
     {
-        // Indipay::gateway() has no 'paytm' case, so this currently keeps the old gateway.
         $indipay = new Indipay(new MockerGateway());
 
         $indipay->gateway('paytm');

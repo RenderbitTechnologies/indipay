@@ -69,7 +69,9 @@ class CitrusGateway implements PaymentGatewayInterface {
 
         $response_hash = $this->decrypt($response);
 
-        if($response_hash!=$response['signature']){
+        $signature = isset($response['signature']) ? $response['signature'] : '';
+
+        if(!is_string($signature) || !hash_equals($response_hash, $signature)){
             return 'Hash Mismatch Error';
         }
 
@@ -117,17 +119,12 @@ class CitrusGateway implements PaymentGatewayInterface {
      */
     protected function decrypt($response)
     {
+        $hash_vars = array('TxId', 'TxStatus', 'amount', 'pgTxnNo', 'issuerRefNo', 'authIdCode', 'firstName', 'lastName', 'pgRespCode', 'addressZip');
+
         $hash_string = '';
-        $hash_string .= $response['TxId'];
-        $hash_string .= $response['TxStatus'];
-        $hash_string .= $response['amount'];
-        $hash_string .= $response['pgTxnNo'];
-        $hash_string .= $response['issuerRefNo'];
-        $hash_string .= $response['authIdCode'];
-        $hash_string .= $response['firstName'];
-        $hash_string .= $response['lastName'];
-        $hash_string .= $response['pgRespCode'];
-        $hash_string .= $response['addressZip'];
+        foreach ($hash_vars as $hash_var) {
+            $hash_string .= isset($response[$hash_var]) ? $response[$hash_var] : '';
+        }
 
 
         return hash_hmac('sha1', $hash_string, $this->secretKey);

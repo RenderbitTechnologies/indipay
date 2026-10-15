@@ -71,7 +71,9 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
 
         $response_hash = $this->decrypt($response);
 
-        if($response_hash!=$response['hash']){
+        $hash = isset($response['hash']) ? $response['hash'] : '';
+
+        if(!is_string($hash) || !hash_equals($response_hash, $hash)){
             return 'Hash Mismatch Error';
         }
 
