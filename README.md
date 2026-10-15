@@ -106,11 +106,14 @@ From version v1.0.12 `Indipay` has started implementing verify method in some ga
 The parameters to be passed, again depends on Gateway used.
 
 > **Verify Feature Currently Supported in** : Paytm, Mocker
+
 ## Testing
 
 ```bash
 composer install
 composer test
 ```
+
+`composer.lock` pins Laravel 12, which needs PHP 8.2 or later. On PHP 8.1, run `composer update` instead of `composer install` to get versions that work with it.
 
 Tests use [Orchestra Testbench](https://github.com/orchestral/testbench) and make no network calls. Tests in the `known-bugs` group describe confirmed bugs and are left out of the default run. Run them with `vendor/bin/phpunit --group known-bugs`.
