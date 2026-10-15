@@ -169,4 +169,12 @@ class PayUMoneyGatewayTest extends TestCase
 
         $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }
+
+    public function test_response_with_an_array_hash_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['hash'] = ['x'];
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
 }

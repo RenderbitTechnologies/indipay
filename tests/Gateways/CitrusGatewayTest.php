@@ -123,4 +123,12 @@ class CitrusGatewayTest extends TestCase
 
         $this->assertSame('Hash Mismatch Error', (new CitrusGateway())->response($this->makeRequest($fields)));
     }
+
+    public function test_response_with_an_array_signature_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['signature'] = ['x'];
+
+        $this->assertSame('Hash Mismatch Error', (new CitrusGateway())->response($this->makeRequest($fields)));
+    }
 }

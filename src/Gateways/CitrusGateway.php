@@ -71,7 +71,7 @@ class CitrusGateway implements PaymentGatewayInterface {
 
         $signature = isset($response['signature']) ? $response['signature'] : '';
 
-        if(!hash_equals($response_hash, $signature)){
+        if(!is_string($signature) || !hash_equals($response_hash, $signature)){
             return 'Hash Mismatch Error';
         }
 
