@@ -2,6 +2,11 @@
 
 namespace Softon\Indipay\Tests\Gateways;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Config;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
@@ -115,5 +120,49 @@ class MockerGatewayTest extends TestCase
         $this->expectException(IndipayParametersMissingException::class);
 
         (new MockerGateway())->verify($parameters);
+    }
+
+    public function test_request_rejects_an_unsupported_service()
+    {
+        Config::set('indipay.mocker.service', 'paytm');
+
+        $this->expectException(IndipayParametersMissingException::class);
+        $this->expectExceptionMessage('Unsupported Mocker service: paytm');
+
+        (new MockerGateway())->request(['amount' => '100']);
+    }
+
+    /**
+     * Build a Guzzle client that answers the status API with the given JSON.
+     */
+    protected function statusClient(array $body, array &$history = [])
+    {
+        $stack = HandlerStack::create(new MockHandler([new Response(200, [], json_encode($body))]));
+        $stack->push(Middleware::history($history));
+
+        return new Client(['handler' => $stack]);
+    }
+
+    public function test_verify_marks_a_matching_amount_as_success()
+    {
+        $history = [];
+        $client = $this->statusClient(['transaction_no' => 'TXN1', 'amount' => '100'], $history);
+
+        $result = (new MockerGateway($client))->verify(['transaction_no' => 'TXN1', 'amount' => '100']);
+
+        $this->assertSame(['transaction_no' => 'TXN1', 'amount' => '100', 'status' => 'success'], $result);
+
+        $uri = $history[0]['request']->getUri();
+        $this->assertSame('https://mocker.in/payment/status', (string) $uri->withQuery(''));
+        $this->assertStringContainsString('transaction_no=TXN1', $uri->getQuery());
+    }
+
+    public function test_verify_marks_a_different_amount_as_failure()
+    {
+        $client = $this->statusClient(['transaction_no' => 'TXN1', 'amount' => '50']);
+
+        $result = (new MockerGateway($client))->verify(['transaction_no' => 'TXN1', 'amount' => '100']);
+
+        $this->assertSame(['transaction_no' => 'TXN1', 'amount' => '50', 'status' => 'failure'], $result);
     }
 }

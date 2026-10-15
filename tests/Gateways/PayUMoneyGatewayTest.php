@@ -3,6 +3,7 @@
 namespace Softon\Indipay\Tests\Gateways;
 
 use Illuminate\Support\Facades\Config;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 use Softon\Indipay\Gateways\PayUMoneyGateway;
 use Softon\Indipay\Tests\TestCase;
@@ -146,6 +147,25 @@ class PayUMoneyGatewayTest extends TestCase
         $fields['status'] = 'failure';
         $fields['hash'] = $this->responseHash($fields);
         $fields['status'] = 'success';
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public static function missingCallbackFields()
+    {
+        return [
+            'hash' => [['hash']],
+            'status' => [['status']],
+            'every field' => [['status', 'email', 'firstname', 'productinfo', 'amount', 'txnid', 'key', 'udf1', 'hash']],
+        ];
+    }
+
+    #[DataProvider('missingCallbackFields')]
+    public function test_response_with_missing_fields_is_rejected(array $missing)
+    {
+        $fields = $this->responseFields();
+        $fields['hash'] = $this->responseHash($fields);
+        $fields = array_diff_key($fields, array_flip($missing));
 
         $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }

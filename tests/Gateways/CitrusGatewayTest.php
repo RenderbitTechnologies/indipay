@@ -3,6 +3,7 @@
 namespace Softon\Indipay\Tests\Gateways;
 
 use Illuminate\Support\Facades\Config;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 use Softon\Indipay\Gateways\CitrusGateway;
 use Softon\Indipay\Tests\TestCase;
@@ -99,6 +100,26 @@ class CitrusGatewayTest extends TestCase
         $fields = $this->responseFields();
         $fields['signature'] = $this->sign($this->responseFields());
         $fields['amount'] = '1.00';
+
+        $this->assertSame('Hash Mismatch Error', (new CitrusGateway())->response($this->makeRequest($fields)));
+    }
+
+    public static function missingCallbackFields()
+    {
+        return [
+            'signature' => [['signature']],
+            'TxId' => [['TxId']],
+            'addressZip' => [['addressZip']],
+            'every field' => [['TxId', 'TxStatus', 'amount', 'pgTxnNo', 'issuerRefNo', 'authIdCode', 'firstName', 'lastName', 'pgRespCode', 'addressZip', 'signature']],
+        ];
+    }
+
+    #[DataProvider('missingCallbackFields')]
+    public function test_response_with_missing_fields_is_rejected(array $missing)
+    {
+        $fields = $this->responseFields();
+        $fields['signature'] = $this->sign($this->responseFields());
+        $fields = array_diff_key($fields, array_flip($missing));
 
         $this->assertSame('Hash Mismatch Error', (new CitrusGateway())->response($this->makeRequest($fields)));
     }

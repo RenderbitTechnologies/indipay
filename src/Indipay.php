@@ -7,6 +7,7 @@ use Softon\Indipay\Gateways\InstaMojoGateway;
 use Softon\Indipay\Gateways\PaymentGatewayInterface;
 use Softon\Indipay\Gateways\PayUMoneyGateway;
 use Softon\Indipay\Gateways\MockerGateway;
+use Softon\Indipay\Gateways\PaytmGateway;
 use Softon\Indipay\Gateways\ZapakPayGateway;
 
 class Indipay {
@@ -79,6 +80,10 @@ class Indipay {
 
             case 'zapakpay':
                 $this->gateway = new ZapakPayGateway();
+                break;
+
+            case 'paytm':
+                $this->gateway = new PaytmGateway();
                 break;
 
         }

@@ -15,9 +15,14 @@ class MockerGateway implements PaymentGatewayInterface {
     protected $testEndPoint = 'https://mocker.in/payment/';
     protected $statusEndPoint = 'https://mocker.in/payment/status';
     public $response = '';
+    protected $client;
 
-    function __construct()
+    /**
+     * @param \GuzzleHttp\ClientInterface|null $client HTTP client for the status API
+     */
+    function __construct($client = null)
     {
+        $this->client = $client;
         $this->service = Config::get('indipay.mocker.service');
         $this->testMode = Config::get('indipay.testMode');
         $this->parameters['redirect_url'] = url(Config::get('indipay.mocker.redirect_url'));
@@ -77,15 +82,15 @@ class MockerGateway implements PaymentGatewayInterface {
         if(!isset($parameters['transaction_no']) || !isset($parameters['amount'])){
             throw new IndipayParametersMissingException;
         } 
-        $client = new \GuzzleHttp\Client();
+        $client = $this->client ?: new \GuzzleHttp\Client();
         $res = $client->request('GET', $this->statusEndPoint, [
             'query' => [
                 'transaction_no' => $parameters['transaction_no'],
                 'redirect_url' => $this->parameters['redirect_url']
             ]
         ]);
-        $mocker_data = json_decode($res->getBody());
-        if($mocker_data->amount == $parameters['amount']){
+        $mocker_data = json_decode($res->getBody(), true);
+        if($mocker_data['amount'] == $parameters['amount']){
             $mocker_data['status'] = 'success';
             return $mocker_data;
         }
@@ -117,6 +122,8 @@ class MockerGateway implements PaymentGatewayInterface {
                 'amount' => 'required|numeric|between:9,200000',
                 'redirect_url' => 'required|url',
             ]);
+        }else{
+            throw new IndipayParametersMissingException('Unsupported Mocker service: '.$this->service);
         }
 
         if ($validator->fails()) {
