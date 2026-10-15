@@ -80,7 +80,7 @@ App\Http\Middleware\VerifyCsrfMiddleware::class,
 Edit `config/indipay.php`:
 
 - `gateway`: the default gateway (one of the names in the table above). Defaults to `Mocker`.
-- `testMode`: `true` sends requests to the gateway's sandbox. Set it to `false` in production.
+- `testMode`: `true` sends requests to the gateway's sandbox. Set it to `false` in production. **ZapakPay has no sandbox URL:** it posts to the live API in both modes.
 - One block per gateway (`ccavenue`, `payumoney`, `ebs`, `citrus`, `instamojo`, `zapakpay`, `paytm`, `mocker`) for keys and return URLs. Most values read from `.env` variables, such as `INDIPAY_MERCHANT_ID`, `INDIPAY_WORKING_KEY` or `PAYTM_MERCHANT_KEY`.
 - `remove_csrf_check`: routes the published middleware lets through without a CSRF token.
 
@@ -132,7 +132,20 @@ public function response(Request $request)
 }
 ```
 
-`Indipay::response` checks the checksum or hash the gateway sends, to catch tampered data, and returns the response fields as an array. Paytm and Mocker also add a `status` key set to `success` or `failure`.
+What `Indipay::response` checks and returns depends on the gateway:
+
+| Gateway | How the response is checked | Returns |
+|---|---|---|
+| CCAvenue | Decrypted with your working key | Array |
+| PayUMoney | Hash | Array, or the string `Hash Mismatch Error` |
+| Citrus | Signature | Array, or the string `Hash Mismatch Error` |
+| ZapakPay | Checksum | Array, or the string `Recieved Checksum Mismatch.` |
+| Paytm | Checksum | Array with a `status` key: `success` or `failure` |
+| InstaMojo | Fetched from the InstaMojo API | Object, or `false` |
+| EBS | **Not checked** | Array of the posted fields |
+| Mocker | **Not checked** | Array with a `status` key: `success` or `failure` |
+
+**EBS and Mocker responses are not checked.** Anyone can post fake data to your response route, since it skips CSRF checks. Confirm the payment with the gateway (for example with `verify()` on Mocker) before you fulfil an order.
 
 Save the transaction details to your database before you send the user to the gateway, so you can check the payment status later.
 
