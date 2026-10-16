@@ -90,7 +90,12 @@ class MockerGateway implements PaymentGatewayInterface {
             ]
         ]);
         $mocker_data = json_decode($res->getBody(), true);
-        if($mocker_data['amount'] == $parameters['amount']){
+        if(!is_array($mocker_data)){
+            return ['status' => 'failure'];
+        }
+        if(isset($mocker_data['amount']) && is_numeric($mocker_data['amount'])
+            && is_numeric($parameters['amount'])
+            && (float) $mocker_data['amount'] == (float) $parameters['amount']){
             $mocker_data['status'] = 'success';
             return $mocker_data;
         }
