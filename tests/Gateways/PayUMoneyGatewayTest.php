@@ -177,4 +177,39 @@ class PayUMoneyGatewayTest extends TestCase
 
         $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }
+
+    public function test_response_with_an_empty_signed_field_is_returned()
+    {
+        $fields = $this->responseFields();
+        $fields['udf1'] = '';
+        $fields['hash'] = $this->responseHash($fields);
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    // Pins current behaviour (see issue #9): a signed field that is empty may
+    // be left out of the callback and the hash still matches.
+    public function test_response_with_an_empty_signed_field_left_out_is_accepted()
+    {
+        $signed = $this->responseFields();
+        $signed['udf1'] = '';
+        $fields = $signed;
+        $fields['hash'] = $this->responseHash($signed);
+        unset($fields['udf1']);
+
+        $response = (new PayUMoneyGateway())->response($this->makeRequest($fields));
+
+        $this->assertSame($fields, $response);
+        $this->assertArrayNotHasKey('udf1', $response);
+    }
+
+    // Leaving out a field that carried a value still fails.
+    public function test_response_with_a_non_empty_signed_field_left_out_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['hash'] = $this->responseHash($fields);
+        unset($fields['udf1']);
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
 }
