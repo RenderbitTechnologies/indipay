@@ -8,5 +8,5 @@ fi
 
 cd "$CLAUDE_PROJECT_DIR"
 
-# install (not ci) so the cached container state is reused across sessions
+# install (not update) so versions pinned in composer.lock are used and the cached container state is reused across sessions
 composer install --no-interaction --prefer-dist --no-progress
