@@ -13,12 +13,19 @@ class EBSGateway implements PaymentGatewayInterface {
     protected $merchantKey = '';
     protected $salt = '';
     protected $hash = '';
+    protected $hashAlgorithm = 'md5';
     protected $endPoint = 'https://secure.ebs.in/pg/ma/payment/request';
     public $response = '';
+
+    /**
+     * Hash algorithms a payment page can be set to on EBS.
+     */
+    const HASH_ALGORITHMS = ['md5', 'sha1', 'sha512'];
 
     function __construct()
     {
         $this->secretKey = Config::get('indipay.ebs.secretKey');
+        $this->hashAlgorithm = $this->resolveHashAlgorithm(Config::get('indipay.ebs.hashAlgorithm') ?? 'md5');
         $this->testMode = Config::get('indipay.testMode');
 
         $this->parameters['channel'] = 0;       // Standard
@@ -127,14 +134,15 @@ class EBSGateway implements PaymentGatewayInterface {
     {
         $this->hash = '';
         $hash_string = $this->secretKey."|".urlencode($this->parameters['account_id'])."|".urlencode($this->parameters['amount'])."|".urlencode($this->parameters['reference_no'])."|".$this->parameters['return_url']."|".urlencode($this->parameters['mode']);
-        $this->hash = md5($hash_string);
+        $this->hash = hash($this->hashAlgorithm, $hash_string);
     }
 
     /**
      * EBS Response Hash Function
      *
-     * Builds the expected SecureHash: the upper-case md5 of the secret key followed by
+     * Builds the expected SecureHash: the upper-case hash of the secret key followed by
      * every non-empty response field except SecureHash, in field name order, joined by '|'.
+     * The hash uses the algorithm configured in indipay.ebs.hashAlgorithm.
      *
      * @param array $response
      * @return string|false false when a field value is not a string
@@ -154,10 +162,28 @@ class EBSGateway implements PaymentGatewayInterface {
             }
         }
 
-        return strtoupper(md5($hash_string));
+        return strtoupper(hash($this->hashAlgorithm, $hash_string));
     }
 
 
+
+    /**
+     * @param mixed $algorithm
+     * @return string
+     * @throws \InvalidArgumentException
+     */
+    protected function resolveHashAlgorithm($algorithm)
+    {
+        $normalized = is_string($algorithm) ? strtolower(trim($algorithm)) : null;
+
+        if (!in_array($normalized, self::HASH_ALGORITHMS, true)) {
+            throw new \InvalidArgumentException(
+                'Unsupported indipay.ebs.hashAlgorithm value. Use one of: '.implode(', ', self::HASH_ALGORITHMS).'.'
+            );
+        }
+
+        return $normalized;
+    }
 
     public function generateTransactionID()
     {

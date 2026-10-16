@@ -40,6 +40,9 @@ return [
         'account_id'  => env('INDIPAY_MERCHANT_ID', ''),
         'secretKey' => env('INDIPAY_WORKING_KEY', ''),
 
+        // Hash algorithm selected for the payment page on EBS: md5, sha1 or sha512
+        'hashAlgorithm' => env('INDIPAY_EBS_HASH_ALGORITHM', 'md5'),
+
         // Should be route address for url() function
         'return_url' => env('INDIPAY_SUCCESS_URL', 'indipay/response'),
     ],
