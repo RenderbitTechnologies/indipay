@@ -74,6 +74,17 @@ class EBSGateway implements PaymentGatewayInterface {
     {
         $response = $request->all();
 
+        // Hash only the posted fields: query parameters on the return URL are not part of EBS's hash.
+        $posted = $request->post();
+
+        $response_hash = $this->decrypt($posted);
+
+        $hash = isset($posted['SecureHash']) ? $posted['SecureHash'] : '';
+
+        if($response_hash === false || !is_string($hash) || !hash_equals($response_hash, strtoupper($hash))){
+            return 'Hash Mismatch Error';
+        }
+
         return $response;
     }
 
@@ -120,16 +131,30 @@ class EBSGateway implements PaymentGatewayInterface {
     }
 
     /**
-     * EBS Decrypt Function
+     * EBS Response Hash Function
      *
-     * @param $plainText
-     * @param $key
-     * @return string
+     * Builds the expected SecureHash: the upper-case md5 of the secret key followed by
+     * every non-empty response field except SecureHash, in field name order, joined by '|'.
+     *
+     * @param array $response
+     * @return string|false false when a field value is not a string
      */
     protected function decrypt($response)
     {
+        unset($response['SecureHash']);
+        ksort($response);
 
-        return $response;
+        $hash_string = $this->secretKey;
+        foreach ($response as $value) {
+            if (!is_scalar($value)) {
+                return false;
+            }
+            if ((string) $value !== '') {
+                $hash_string .= '|'.$value;
+            }
+        }
+
+        return strtoupper(md5($hash_string));
     }
 
 

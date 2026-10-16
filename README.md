@@ -142,12 +142,12 @@ What `Indipay::response` checks and returns depends on the gateway:
 | ZapakPay | Checksum | Array, or the string `Recieved Checksum Mismatch.` |
 | Paytm | Checksum | Array with a `status` key: `success` or `failure` |
 | InstaMojo | Fetched from the InstaMojo API | Object, or `false` |
-| EBS | **Not checked** | Array of the posted fields |
+| EBS | SecureHash | Array, or the string `Hash Mismatch Error` |
 | Mocker | **Not checked** | Array with a `status` key: `success` or `failure` |
 
 **Absent fields count as empty.** For PayUMoney and Citrus, a field that is part of the hash and left out of the callback is treated as an empty string. If the gateway signed that field with an empty value, a callback without the key still passes the check, and the array you get back has no such key. PayUMoney joins the signed values with `|`, so a field that carried a value cannot be left out. Citrus joins them with no separator, so field boundaries are not protected: a callback can drop a non-empty field if the next field's value is changed to the two values joined. Use `array_key_exists('field', $response)` to tell an absent field from an empty one, and use `$response['field'] ?? ''` only if you want to treat both the same.
 
-**EBS and Mocker responses are not checked.** Anyone can post fake data to your response route, since it skips CSRF checks. Confirm the payment with the gateway (for example with `verify()` on Mocker) before you fulfil an order.
+**Mocker responses are not checked.** Anyone can post fake data to your response route, since it skips CSRF checks. Confirm the payment with the gateway (for example with `verify()`) before you fulfil an order.
 
 Save the transaction details to your database before you send the user to the gateway, so you can check the payment status later.
 
