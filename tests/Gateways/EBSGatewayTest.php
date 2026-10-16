@@ -103,10 +103,102 @@ class EBSGatewayTest extends TestCase
         $this->assertStringContainsString('name="state" value=""', $html);
     }
 
-    public function test_response_returns_the_posted_fields()
+    /**
+     * Hash EBS sends back: upper-case md5(secret|every non-empty field except SecureHash, sorted by name).
+     */
+    protected function responseHash(array $fields)
     {
-        $fields = ['ResponseCode' => '0', 'MerchantRefNo' => 'REF1'];
+        unset($fields['SecureHash']);
+        ksort($fields);
+
+        $string = 'EBS_SECRET';
+        foreach ($fields as $value) {
+            if ($value !== '') {
+                $string .= '|'.$value;
+            }
+        }
+
+        return strtoupper(md5($string));
+    }
+
+    protected function responseFields()
+    {
+        return [
+            'ResponseCode' => '0',
+            'ResponseMessage' => 'Transaction Successful',
+            'MerchantRefNo' => 'REF1',
+            'Amount' => '100.00',
+            'PaymentID' => '12345',
+            'IsFlagged' => 'NO',
+            'Description' => '',
+        ];
+    }
+
+    public function test_response_with_a_valid_hash_is_returned()
+    {
+        $fields = $this->responseFields();
+        $fields['SecureHash'] = $this->responseHash($fields);
 
         $this->assertSame($fields, (new EBSGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_a_lower_case_hash_is_returned()
+    {
+        $fields = $this->responseFields();
+        $fields['SecureHash'] = strtolower($this->responseHash($fields));
+
+        $this->assertSame($fields, (new EBSGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_a_tampered_field_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['SecureHash'] = $this->responseHash($fields);
+        $fields['Amount'] = '1.00';
+
+        $this->assertSame('Hash Mismatch Error', (new EBSGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_a_tampered_hash_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['SecureHash'] = str_repeat('0', 32);
+
+        $this->assertSame('Hash Mismatch Error', (new EBSGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_signed_with_another_secret_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['SecureHash'] = strtoupper(md5('OTHER_SECRET|'.implode('|', array_filter($fields))));
+
+        $this->assertSame('Hash Mismatch Error', (new EBSGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_without_a_hash_is_rejected()
+    {
+        $this->assertSame('Hash Mismatch Error', (new EBSGateway())->response($this->makeRequest($this->responseFields())));
+    }
+
+    public function test_response_with_an_empty_body_is_rejected()
+    {
+        $this->assertSame('Hash Mismatch Error', (new EBSGateway())->response($this->makeRequest([])));
+    }
+
+    public function test_response_with_an_array_hash_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['SecureHash'] = ['x'];
+
+        $this->assertSame('Hash Mismatch Error', (new EBSGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_an_array_field_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['SecureHash'] = $this->responseHash($fields);
+        $fields['Extra'] = ['x'];
+
+        $this->assertSame('Hash Mismatch Error', (new EBSGateway())->response($this->makeRequest($fields)));
     }
 }

@@ -142,10 +142,10 @@ What `Indipay::response` checks and returns depends on the gateway:
 | ZapakPay | Checksum | Array, or the string `Recieved Checksum Mismatch.` |
 | Paytm | Checksum | Array with a `status` key: `success` or `failure` |
 | InstaMojo | Fetched from the InstaMojo API | Object, or `false` |
-| EBS | **Not checked** | Array of the posted fields |
+| EBS | SecureHash | Array, or the string `Hash Mismatch Error` |
 | Mocker | **Not checked** | Array with a `status` key: `success` or `failure` |
 
-**EBS and Mocker responses are not checked.** Anyone can post fake data to your response route, since it skips CSRF checks. Confirm the payment with the gateway (for example with `verify()` on Mocker) before you fulfil an order.
+**Mocker responses are not checked.** Anyone can post fake data to your response route, since it skips CSRF checks. Confirm the payment with the gateway (for example with `verify()`) before you fulfil an order.
 
 Save the transaction details to your database before you send the user to the gateway, so you can check the payment status later.
 
