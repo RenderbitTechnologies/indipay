@@ -1,0 +1,128 @@
+name: Bug report
+description: Report a bug to help us improve
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: e.g., "Payment fails with Mocker gateway when using test mode"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Configure gateway...
+        2. Call Indipay::prepare()...
+        3. Process payment...
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened. Include error messages, logs, or stack traces.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gateway
+    attributes:
+      label: Gateway
+      description: Which payment gateway are you using?
+      options:
+        - CCAvenue
+        - PayUMoney
+        - EBS
+        - Citrus
+        - InstaMojo
+        - ZapakPay (Mobikwik)
+        - Paytm
+        - Mocker
+        - Not sure
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: laravel-version
+    attributes:
+      label: Laravel version
+      description: What Laravel version are you using?
+      options:
+        - "12.x"
+        - "11.x"
+        - "10.x"
+        - "9.x"
+        - "8.x"
+        - "7.x"
+        - "6.x"
+        - "5.8"
+        - "5.7"
+        - "5.6"
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      description: What PHP version are you using? (e.g., 8.4.0)
+      placeholder: "8.4.0"
+    validations:
+      required: true
+
+  - type: input
+    id: package-version
+    attributes:
+      label: IndiPay version
+      description: What version of IndiPay are you using? (e.g., 1.1.0, dev-master)
+      placeholder: "1.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration (optional)
+      description: Relevant parts of your config/indipay.php or .env (redact sensitive keys)
+      render: php
+      placeholder: |
+        // Redact merchant keys, working keys, etc.
+        'gateway' => 'Paytm',
+        'testMode' => true,
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code snippet (optional)
+      description: The minimal code that reproduces the issue
+      render: php
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context about the problem

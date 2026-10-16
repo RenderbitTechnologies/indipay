@@ -1,0 +1,47 @@
+name: Documentation
+description: Report missing or incorrect documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: textarea
+    id: issue
+    attributes:
+      label: Documentation issue
+      description: What's wrong or missing?
+      placeholder: e.g., "README missing verify() method usage for Paytm"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue type
+      description: Is this missing, incorrect, unclear, or outdated?
+      options:
+        - Missing
+        - Incorrect
+        - Unclear
+        - Outdated
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: Where is this documentation? (file, section, URL)
+      placeholder: "README.md, Installation section"
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+      description: What should the documentation say instead?
+      placeholder: "Add example showing..."
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other details

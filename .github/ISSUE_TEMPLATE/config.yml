@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & discussions
+    url: https://github.com/RenderbitTechnologies/indipay/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions
+  - name: Security issue
+    url: https://github.com/RenderbitTechnologies/indipay/security/policy
+    about: Report a security vulnerability privately
+  - name: Package documentation
+    url: https://github.com/RenderbitTechnologies/indipay#readme
+    about: Read the documentation in README.md

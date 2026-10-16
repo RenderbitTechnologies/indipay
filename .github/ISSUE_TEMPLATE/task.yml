@@ -1,0 +1,48 @@
+name: Task
+description: A general task, chore, or refactoring work
+title: "[Task]: "
+labels: ["task"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Task description
+      description: What needs to be done?
+      placeholder: e.g., "Add type hints to gateway classes"
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this task needed? What value does it add?
+      placeholder: "Improves code quality and IDE support"
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is included in this task? What is out of scope?
+      placeholder: |
+        **In scope:**
+        - Add PHP 8.1+ type hints
+
+        **Out of scope:**
+        - Breaking API changes
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How will we know this is done?
+      placeholder: |
+        - [ ] Code updated
+        - [ ] Tests still pass
+        - [ ] No BC breaks
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other relevant information

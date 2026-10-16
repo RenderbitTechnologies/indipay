@@ -1,0 +1,75 @@
+name: Feature request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe it clearly.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A brief summary of the feature
+      placeholder: e.g., "Add verify support for CCAvenue"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem does this solve? Why is this needed?
+      placeholder: "Currently it's not possible to verify..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed solution
+      description: How should this work? Describe your proposed implementation approach if you have one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative solutions or workarounds you've considered
+      placeholder: "Other approaches could be..."
+
+  - type: dropdown
+    id: gateway
+    attributes:
+      label: Gateway (if applicable)
+      description: Which gateway does this relate to?
+      options:
+        - Any/All gateways
+        - CCAvenue
+        - PayUMoney
+        - EBS
+        - Citrus
+        - InstaMojo
+        - ZapakPay (Mobikwik)
+        - Paytm
+        - Mocker
+        - Other
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What needs to be true for this feature to be considered complete?
+      placeholder: |
+        - [ ] Support for verify() method
+        - [ ] Tests added
+        - [ ] Documentation updated
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context, screenshots, or links
