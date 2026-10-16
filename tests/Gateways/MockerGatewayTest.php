@@ -157,6 +157,53 @@ class MockerGatewayTest extends TestCase
         $this->assertStringContainsString('transaction_no=TXN1', $uri->getQuery());
     }
 
+    public function test_verify_fails_when_the_status_reply_is_not_json()
+    {
+        $client = new Client(['handler' => HandlerStack::create(new MockHandler([new Response(200, [], 'not json')]))]);
+
+        $result = (new MockerGateway($client))->verify(['transaction_no' => 'TXN1', 'amount' => 0]);
+
+        $this->assertSame(['status' => 'failure'], $result);
+    }
+
+    public function test_verify_fails_when_the_status_reply_is_a_json_scalar()
+    {
+        $client = new Client(['handler' => HandlerStack::create(new MockHandler([new Response(200, [], '"ok"')]))]);
+
+        $result = (new MockerGateway($client))->verify(['transaction_no' => 'TXN1', 'amount' => 0]);
+
+        $this->assertSame(['status' => 'failure'], $result);
+    }
+
+    public function test_verify_fails_when_the_status_reply_has_no_amount_and_expected_amount_is_zero()
+    {
+        $client = $this->statusClient(['transaction_no' => 'TXN1']);
+
+        $result = (new MockerGateway($client))->verify(['transaction_no' => 'TXN1', 'amount' => 0]);
+
+        $this->assertSame(['transaction_no' => 'TXN1', 'status' => 'failure'], $result);
+    }
+
+    public function test_verify_fails_when_the_status_amount_is_null_or_not_numeric()
+    {
+        foreach ([null, 'abc', ''] as $amount) {
+            $client = $this->statusClient(['transaction_no' => 'TXN1', 'amount' => $amount]);
+
+            $result = (new MockerGateway($client))->verify(['transaction_no' => 'TXN1', 'amount' => 0]);
+
+            $this->assertSame('failure', $result['status']);
+        }
+    }
+
+    public function test_verify_marks_a_matching_zero_amount_as_success()
+    {
+        $client = $this->statusClient(['transaction_no' => 'TXN1', 'amount' => 0]);
+
+        $result = (new MockerGateway($client))->verify(['transaction_no' => 'TXN1', 'amount' => 0]);
+
+        $this->assertSame('success', $result['status']);
+    }
+
     public function test_verify_marks_a_different_amount_as_failure()
     {
         $client = $this->statusClient(['transaction_no' => 'TXN1', 'amount' => '50']);
