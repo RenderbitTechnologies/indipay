@@ -142,6 +142,16 @@ class EBSGatewayTest extends TestCase
         $this->assertSame($fields, (new EBSGateway())->response($this->makeRequest($fields)));
     }
 
+    public function test_response_ignores_query_parameters_on_the_return_url()
+    {
+        $fields = $this->responseFields();
+        $fields['SecureHash'] = $this->responseHash($fields);
+
+        $request = \Illuminate\Http\Request::create('/indipay/response?order=123', 'POST', $fields);
+
+        $this->assertSame($fields + ['order' => '123'], (new EBSGateway())->response($request));
+    }
+
     public function test_response_with_a_lower_case_hash_is_returned()
     {
         $fields = $this->responseFields();
