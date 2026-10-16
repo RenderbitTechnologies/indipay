@@ -145,7 +145,7 @@ What `Indipay::response` checks and returns depends on the gateway:
 | EBS | **Not checked** | Array of the posted fields |
 | Mocker | **Not checked** | Array with a `status` key: `success` or `failure` |
 
-**Empty fields count as missing.** For PayUMoney and Citrus, a field that is part of the hash and left out of the callback is treated as an empty string. If the gateway signed that field with an empty value, a callback without the key still passes the check, and the array you get back has no such key. A field that carried a value cannot be left out. Use `$response['field'] ?? ''` rather than `isset()` or `array_key_exists()` to tell an empty field from an absent one.
+**Absent fields count as empty.** For PayUMoney and Citrus, a field that is part of the hash and left out of the callback is treated as an empty string. If the gateway signed that field with an empty value, a callback without the key still passes the check, and the array you get back has no such key. PayUMoney joins the signed values with `|`, so a field that carried a value cannot be left out. Citrus joins them with no separator, so field boundaries are not protected: a callback can drop a non-empty field if the next field's value is changed to the two values joined. Use `array_key_exists('field', $response)` to tell an absent field from an empty one, and use `$response['field'] ?? ''` only if you want to treat both the same.
 
 **EBS and Mocker responses are not checked.** Anyone can post fake data to your response route, since it skips CSRF checks. Confirm the payment with the gateway (for example with `verify()` on Mocker) before you fulfil an order.
 
