@@ -14,7 +14,9 @@ fi
 cd "$CLAUDE_PROJECT_DIR" || exit 0
 
 log=/tmp/composer-install.log
+lock=/tmp/composer-install.lock
 marker=vendor/.session-start.sha256
+pending=/tmp/composer-install.sha256
 inputs=(composer.json composer.lock .claude/hooks/session-start.sh)
 
 # Skip when dependencies were already installed from the same inputs
@@ -23,19 +25,35 @@ if [ -f vendor/autoload.php ] && sha256sum --check --status "$marker" 2>/dev/nul
   exit 0
 fi
 
+# Skip when an install started by an earlier startup/resume is still running.
+# The detached install inherits fd 9 and holds the lock until it exits.
+exec 9>"$lock"
+if ! flock -n 9; then
+  echo "composer install is already running in the background (log: $log). vendor/ is ready once $marker exists; wait for it before running phpunit."
+  exit 0
+fi
+
 # Delete the old marker first, so a failed install runs again next time
 rm -f "$marker"
 
+# Hash the inputs before installing, so the marker describes what composer actually read
+sha256sum "${inputs[@]}" > "$pending"
+
 # install (not update) so versions pinned in composer.lock are used.
-# All file descriptors are redirected so the hook returns immediately instead of waiting on the child.
+# stdin/stdout/stderr are redirected so the hook returns immediately instead of waiting on the child.
 setsid nohup bash -c '
   export COMPOSER_NO_INTERACTION=1 GIT_TERMINAL_PROMPT=0
   if timeout 900 composer install --no-interaction --prefer-dist --no-progress; then
-    sha256sum "$@" > '"$marker"' && echo "composer install finished"
+    # Only publish the marker if the inputs did not change while composer was running
+    if sha256sum --check --status "$1"; then
+      mv "$1" "$2" && echo "composer install finished"
+    else
+      echo "composer install finished, but composer.json/composer.lock changed during the install; not marking vendor/ as up to date"
+    fi
   else
     echo "composer install FAILED (exit $?)"
   fi
-' _ "${inputs[@]}" </dev/null >"$log" 2>&1 &
+' _ "$pending" "$marker" </dev/null >"$log" 2>&1 &
 
 echo "composer install is running in the background (log: $log). vendor/ is ready once $marker exists; wait for it before running phpunit."
 exit 0
