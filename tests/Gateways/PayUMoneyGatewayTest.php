@@ -52,6 +52,10 @@ class PayUMoneyGatewayTest extends TestCase
             'txnid' => 'TXN1',
             'key' => 'PAYU_KEY',
             'udf1' => 'note',
+            'udf2' => '',
+            'udf3' => '',
+            'udf4' => '',
+            'udf5' => '',
         ];
     }
 
@@ -187,20 +191,67 @@ class PayUMoneyGatewayTest extends TestCase
         $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }
 
-    // Pins current behaviour (see issue #9): a signed field that is empty may
-    // be left out of the callback and the hash still matches.
-    public function test_response_with_an_empty_signed_field_left_out_is_accepted()
+    // By default a signed field that is empty may be left out of the callback
+    // and the hash still matches (see issue #9).
+    public function test_response_with_an_empty_signed_field_left_out_is_accepted_by_default()
     {
-        $signed = $this->responseFields();
-        $signed['udf1'] = '';
-        $fields = $signed;
-        $fields['hash'] = $this->responseHash($signed);
-        unset($fields['udf1']);
+        $fields = $this->emptyFieldLeftOut();
 
         $response = (new PayUMoneyGateway())->response($this->makeRequest($fields));
 
         $this->assertSame($fields, $response);
-        $this->assertArrayNotHasKey('udf1', $response);
+        $this->assertArrayNotHasKey('productinfo', $response);
+    }
+
+    public function test_response_with_an_empty_signed_field_left_out_is_rejected_in_strict_mode()
+    {
+        Config::set('indipay.payumoney.strictCallbackFields', true);
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($this->emptyFieldLeftOut())));
+    }
+
+    public function test_strict_mode_accepts_a_response_with_an_empty_signed_field()
+    {
+        Config::set('indipay.payumoney.strictCallbackFields', true);
+
+        $fields = $this->responseFields();
+        $fields['productinfo'] = '';
+        $fields['hash'] = $this->responseHash($fields);
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_strict_mode_rejects_a_response_with_a_signed_field_left_out()
+    {
+        Config::set('indipay.payumoney.strictCallbackFields', true);
+
+        $fields = $this->responseFields();
+        $fields['hash'] = $this->responseHash($fields);
+        unset($fields['productinfo']);
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_strict_mode_accepts_a_response_with_unused_udf_fields_left_out()
+    {
+        Config::set('indipay.payumoney.strictCallbackFields', true);
+
+        $signed = $this->responseFields();
+        $fields = array_diff_key($signed, array_flip(['udf1', 'udf2', 'udf3', 'udf4', 'udf5']));
+        $fields['hash'] = $this->responseHash(array_merge($fields, ['udf1' => '']));
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    protected function emptyFieldLeftOut()
+    {
+        $signed = $this->responseFields();
+        $signed['productinfo'] = '';
+        $fields = $signed;
+        $fields['hash'] = $this->responseHash($signed);
+        unset($fields['productinfo']);
+
+        return $fields;
     }
 
     // Leaving out a field that carried a value still fails.

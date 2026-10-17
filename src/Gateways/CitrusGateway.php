@@ -12,6 +12,7 @@ class CitrusGateway implements PaymentGatewayInterface {
     protected $testMode = false;
     protected $hash = '';
     protected $vanityUrl = '';
+    protected $strictCallbackFields = false;
     protected $liveEndPoint = 'https://www.citruspay.com/';
     protected $testEndPoint = 'https://sandbox.citruspay.com/';
     public $response = '';
@@ -20,6 +21,7 @@ class CitrusGateway implements PaymentGatewayInterface {
     {
         $this->vanityUrl = Config::get('indipay.citrus.vanityUrl');
         $this->secretKey = Config::get('indipay.citrus.secretKey');
+        $this->strictCallbackFields = (bool) Config::get('indipay.citrus.strictCallbackFields', false);
         $this->testMode = Config::get('indipay.testMode');
 
         $this->parameters['merchantTxnId'] = $this->generateTransactionID();
@@ -69,6 +71,10 @@ class CitrusGateway implements PaymentGatewayInterface {
 
         $response_hash = $this->decrypt($response);
 
+        if($response_hash === false){
+            return 'Hash Mismatch Error';
+        }
+
         $signature = isset($response['signature']) ? $response['signature'] : '';
 
         if(!is_string($signature) || !hash_equals($response_hash, $signature)){
@@ -115,7 +121,7 @@ class CitrusGateway implements PaymentGatewayInterface {
      * Citrus Decrypt Function
      *
      * @param $response
-     * @return string
+     * @return string|false false when strictCallbackFields is on and a signed field is missing
      */
     protected function decrypt($response)
     {
@@ -123,7 +129,14 @@ class CitrusGateway implements PaymentGatewayInterface {
 
         $hash_string = '';
         foreach ($hash_vars as $hash_var) {
-            $hash_string .= isset($response[$hash_var]) ? $response[$hash_var] : '';
+            if (!array_key_exists($hash_var, $response)) {
+                // In strict mode every signed field must be present, even when its value is empty.
+                if ($this->strictCallbackFields) {
+                    return false;
+                }
+                continue;
+            }
+            $hash_string .= $response[$hash_var];
         }
 
 

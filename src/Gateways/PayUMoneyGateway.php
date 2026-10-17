@@ -12,6 +12,10 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
     protected $testMode = false;
     protected $merchantKey = '';
     protected $salt = '';
+    protected $strictCallbackFields = false;
+    // PayU leaves unused udf fields out of its response, and the hash treats them as empty.
+    // The blank entries are the empty slots in the hash sequence, not fields.
+    protected $optionalHashFields = array('', 'udf1', 'udf2', 'udf3', 'udf4', 'udf5');
     protected $hash = '';
     protected $liveEndPoint = 'https://secure.payu.in/_payment';
     protected $testEndPoint = 'https://test.payu.in/_payment';
@@ -21,6 +25,7 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
     {
         $this->merchantKey = Config::get('indipay.payumoney.merchantKey');
         $this->salt = Config::get('indipay.payumoney.salt');
+        $this->strictCallbackFields = (bool) Config::get('indipay.payumoney.strictCallbackFields', false);
         $this->testMode = Config::get('indipay.testMode');
 
         $this->parameters['key'] = $this->merchantKey;
@@ -70,6 +75,10 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
         $response = $request->all();
 
         $response_hash = $this->decrypt($response);
+
+        if($response_hash === false){
+            return 'Hash Mismatch Error';
+        }
 
         $hash = isset($response['hash']) ? $response['hash'] : '';
 
@@ -128,9 +137,8 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
     /**
      * PayUMoney Decrypt Function
      *
-     * @param $plainText
-     * @param $key
-     * @return string
+     * @param $response
+     * @return string|false false when strictCallbackFields is on and a signed field is missing
      */
     protected function decrypt($response)
     {
@@ -140,7 +148,12 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
         $hash_string = $this->salt."|";
 
         foreach($hashVarsSeq as $hash_var) {
-            $hash_string .= isset($response[$hash_var]) ? $response[$hash_var] : '';
+            if(array_key_exists($hash_var, $response)){
+                $hash_string .= $response[$hash_var];
+            }elseif($this->strictCallbackFields && !in_array($hash_var, $this->optionalHashFields, true)){
+                // In strict mode every signed field must be present, even when its value is empty.
+                return false;
+            }
             $hash_string .= '|';
         }
 
