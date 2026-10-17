@@ -200,7 +200,7 @@ class PayUMoneyGatewayTest extends TestCase
         $response = (new PayUMoneyGateway())->response($this->makeRequest($fields));
 
         $this->assertSame($fields, $response);
-        $this->assertArrayNotHasKey('udf1', $response);
+        $this->assertArrayNotHasKey('productinfo', $response);
     }
 
     public function test_response_with_an_empty_signed_field_left_out_is_rejected_in_strict_mode()
@@ -215,7 +215,7 @@ class PayUMoneyGatewayTest extends TestCase
         Config::set('indipay.payumoney.strictCallbackFields', true);
 
         $fields = $this->responseFields();
-        $fields['udf1'] = '';
+        $fields['productinfo'] = '';
         $fields['hash'] = $this->responseHash($fields);
 
         $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
@@ -227,18 +227,29 @@ class PayUMoneyGatewayTest extends TestCase
 
         $fields = $this->responseFields();
         $fields['hash'] = $this->responseHash($fields);
-        unset($fields['udf1']);
+        unset($fields['productinfo']);
 
         $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_strict_mode_accepts_a_response_with_unused_udf_fields_left_out()
+    {
+        Config::set('indipay.payumoney.strictCallbackFields', true);
+
+        $signed = $this->responseFields();
+        $fields = array_diff_key($signed, array_flip(['udf1', 'udf2', 'udf3', 'udf4', 'udf5']));
+        $fields['hash'] = $this->responseHash(array_merge($fields, ['udf1' => '']));
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }
 
     protected function emptyFieldLeftOut()
     {
         $signed = $this->responseFields();
-        $signed['udf1'] = '';
+        $signed['productinfo'] = '';
         $fields = $signed;
         $fields['hash'] = $this->responseHash($signed);
-        unset($fields['udf1']);
+        unset($fields['productinfo']);
 
         return $fields;
     }
