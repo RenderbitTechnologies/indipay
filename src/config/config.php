@@ -31,6 +31,9 @@ return [
         'salt'  => env('INDIPAY_SALT', ''),
         'workingKey' => env('INDIPAY_WORKING_KEY', ''),
 
+        // Reject a response that leaves out a field covered by its hash, even an empty one
+        'strictCallbackFields' => env('INDIPAY_STRICT_CALLBACK_FIELDS', false),
+
         // Should be route address for url() function
         'successUrl' => env('INDIPAY_SUCCESS_URL', 'indipay/response'),
         'failureUrl' => env('INDIPAY_FAILURE_URL', 'indipay/response'),
@@ -50,6 +53,9 @@ return [
     'citrus' => [                         // Citrus Parameters
         'vanityUrl'  => env('INDIPAY_CITRUS_VANITY_URL', ''),
         'secretKey' => env('INDIPAY_WORKING_KEY', ''),
+
+        // Reject a response that leaves out a field covered by its signature, even an empty one
+        'strictCallbackFields' => env('INDIPAY_STRICT_CALLBACK_FIELDS', false),
 
         // Should be route address for url() function
         'returnUrl' => env('INDIPAY_SUCCESS_URL', 'indipay/response'),

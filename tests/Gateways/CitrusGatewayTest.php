@@ -141,9 +141,48 @@ class CitrusGatewayTest extends TestCase
         $this->assertSame($fields, (new CitrusGateway())->response($this->makeRequest($fields)));
     }
 
-    // Citrus signs every field, so a callback that leaves one out is not the
-    // one Citrus sent, even when the signature still matches (see issue #9).
-    public function test_response_with_an_empty_signed_field_left_out_is_rejected()
+    // By default a signed field that is empty may be left out of the callback
+    // and the signature still matches (see issue #9).
+    public function test_response_with_an_empty_signed_field_left_out_is_accepted_by_default()
+    {
+        $fields = $this->emptyFieldLeftOut();
+
+        $response = (new CitrusGateway())->response($this->makeRequest($fields));
+
+        $this->assertSame($fields, $response);
+        $this->assertArrayNotHasKey('authIdCode', $response);
+    }
+
+    public function test_response_with_an_empty_signed_field_left_out_is_rejected_in_strict_mode()
+    {
+        Config::set('indipay.citrus.strictCallbackFields', true);
+
+        $this->assertSame('Hash Mismatch Error', (new CitrusGateway())->response($this->makeRequest($this->emptyFieldLeftOut())));
+    }
+
+    public function test_strict_mode_accepts_a_response_with_an_empty_signed_field()
+    {
+        Config::set('indipay.citrus.strictCallbackFields', true);
+
+        $fields = $this->responseFields();
+        $fields['authIdCode'] = '';
+        $fields['signature'] = $this->sign($fields);
+
+        $this->assertSame($fields, (new CitrusGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_strict_mode_rejects_a_response_with_a_signed_field_left_out()
+    {
+        Config::set('indipay.citrus.strictCallbackFields', true);
+
+        $fields = $this->responseFields();
+        $fields['signature'] = $this->sign($fields);
+        unset($fields['authIdCode']);
+
+        $this->assertSame('Hash Mismatch Error', (new CitrusGateway())->response($this->makeRequest($fields)));
+    }
+
+    protected function emptyFieldLeftOut()
     {
         $signed = $this->responseFields();
         $signed['authIdCode'] = '';
@@ -151,7 +190,7 @@ class CitrusGatewayTest extends TestCase
         $fields['signature'] = $this->sign($signed);
         unset($fields['authIdCode']);
 
-        $this->assertSame('Hash Mismatch Error', (new CitrusGateway())->response($this->makeRequest($fields)));
+        return $fields;
     }
 
     // Leaving out a field that carried a value still fails.

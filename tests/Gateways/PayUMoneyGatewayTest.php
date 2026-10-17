@@ -191,9 +191,48 @@ class PayUMoneyGatewayTest extends TestCase
         $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }
 
-    // PayU sends every signed field, so a callback that leaves one out is not
-    // the one PayU sent, even when the hash still matches (see issue #9).
-    public function test_response_with_an_empty_signed_field_left_out_is_rejected()
+    // By default a signed field that is empty may be left out of the callback
+    // and the hash still matches (see issue #9).
+    public function test_response_with_an_empty_signed_field_left_out_is_accepted_by_default()
+    {
+        $fields = $this->emptyFieldLeftOut();
+
+        $response = (new PayUMoneyGateway())->response($this->makeRequest($fields));
+
+        $this->assertSame($fields, $response);
+        $this->assertArrayNotHasKey('udf1', $response);
+    }
+
+    public function test_response_with_an_empty_signed_field_left_out_is_rejected_in_strict_mode()
+    {
+        Config::set('indipay.payumoney.strictCallbackFields', true);
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($this->emptyFieldLeftOut())));
+    }
+
+    public function test_strict_mode_accepts_a_response_with_an_empty_signed_field()
+    {
+        Config::set('indipay.payumoney.strictCallbackFields', true);
+
+        $fields = $this->responseFields();
+        $fields['udf1'] = '';
+        $fields['hash'] = $this->responseHash($fields);
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_strict_mode_rejects_a_response_with_a_signed_field_left_out()
+    {
+        Config::set('indipay.payumoney.strictCallbackFields', true);
+
+        $fields = $this->responseFields();
+        $fields['hash'] = $this->responseHash($fields);
+        unset($fields['udf1']);
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    protected function emptyFieldLeftOut()
     {
         $signed = $this->responseFields();
         $signed['udf1'] = '';
@@ -201,7 +240,7 @@ class PayUMoneyGatewayTest extends TestCase
         $fields['hash'] = $this->responseHash($signed);
         unset($fields['udf1']);
 
-        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+        return $fields;
     }
 
     // Leaving out a field that carried a value still fails.

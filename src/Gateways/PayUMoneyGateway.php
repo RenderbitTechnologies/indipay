@@ -12,6 +12,7 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
     protected $testMode = false;
     protected $merchantKey = '';
     protected $salt = '';
+    protected $strictCallbackFields = false;
     protected $hash = '';
     protected $liveEndPoint = 'https://secure.payu.in/_payment';
     protected $testEndPoint = 'https://test.payu.in/_payment';
@@ -21,6 +22,7 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
     {
         $this->merchantKey = Config::get('indipay.payumoney.merchantKey');
         $this->salt = Config::get('indipay.payumoney.salt');
+        $this->strictCallbackFields = (bool) Config::get('indipay.payumoney.strictCallbackFields', false);
         $this->testMode = Config::get('indipay.testMode');
 
         $this->parameters['key'] = $this->merchantKey;
@@ -133,7 +135,7 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
      * PayUMoney Decrypt Function
      *
      * @param $response
-     * @return string|false false when a signed field is missing from the response
+     * @return string|false false when strictCallbackFields is on and a signed field is missing
      */
     protected function decrypt($response)
     {
@@ -143,12 +145,11 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
         $hash_string = $this->salt."|";
 
         foreach($hashVarsSeq as $hash_var) {
-            if($hash_var !== ''){
-                // Every signed field must be present, even when its value is empty.
-                if(!array_key_exists($hash_var, $response)){
-                    return false;
-                }
+            if(array_key_exists($hash_var, $response)){
                 $hash_string .= $response[$hash_var];
+            }elseif($hash_var !== '' && $this->strictCallbackFields){
+                // In strict mode every signed field must be present, even when its value is empty.
+                return false;
             }
             $hash_string .= '|';
         }
