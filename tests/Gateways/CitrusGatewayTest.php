@@ -141,9 +141,9 @@ class CitrusGatewayTest extends TestCase
         $this->assertSame($fields, (new CitrusGateway())->response($this->makeRequest($fields)));
     }
 
-    // Pins current behaviour (see issue #9): a signed field that is empty may
-    // be left out of the callback and the signature still matches.
-    public function test_response_with_an_empty_signed_field_left_out_is_accepted()
+    // Citrus signs every field, so a callback that leaves one out is not the
+    // one Citrus sent, even when the signature still matches (see issue #9).
+    public function test_response_with_an_empty_signed_field_left_out_is_rejected()
     {
         $signed = $this->responseFields();
         $signed['authIdCode'] = '';
@@ -151,10 +151,7 @@ class CitrusGatewayTest extends TestCase
         $fields['signature'] = $this->sign($signed);
         unset($fields['authIdCode']);
 
-        $response = (new CitrusGateway())->response($this->makeRequest($fields));
-
-        $this->assertSame($fields, $response);
-        $this->assertArrayNotHasKey('authIdCode', $response);
+        $this->assertSame('Hash Mismatch Error', (new CitrusGateway())->response($this->makeRequest($fields)));
     }
 
     // Leaving out a field that carried a value still fails.

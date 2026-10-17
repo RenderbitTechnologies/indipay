@@ -71,6 +71,10 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
 
         $response_hash = $this->decrypt($response);
 
+        if($response_hash === false){
+            return 'Hash Mismatch Error';
+        }
+
         $hash = isset($response['hash']) ? $response['hash'] : '';
 
         if(!is_string($hash) || !hash_equals($response_hash, $hash)){
@@ -128,9 +132,8 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
     /**
      * PayUMoney Decrypt Function
      *
-     * @param $plainText
-     * @param $key
-     * @return string
+     * @param $response
+     * @return string|false false when a signed field is missing from the response
      */
     protected function decrypt($response)
     {
@@ -140,7 +143,13 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
         $hash_string = $this->salt."|";
 
         foreach($hashVarsSeq as $hash_var) {
-            $hash_string .= isset($response[$hash_var]) ? $response[$hash_var] : '';
+            if($hash_var !== ''){
+                // Every signed field must be present, even when its value is empty.
+                if(!array_key_exists($hash_var, $response)){
+                    return false;
+                }
+                $hash_string .= $response[$hash_var];
+            }
             $hash_string .= '|';
         }
 

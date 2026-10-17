@@ -69,6 +69,10 @@ class CitrusGateway implements PaymentGatewayInterface {
 
         $response_hash = $this->decrypt($response);
 
+        if($response_hash === false){
+            return 'Hash Mismatch Error';
+        }
+
         $signature = isset($response['signature']) ? $response['signature'] : '';
 
         if(!is_string($signature) || !hash_equals($response_hash, $signature)){
@@ -115,7 +119,7 @@ class CitrusGateway implements PaymentGatewayInterface {
      * Citrus Decrypt Function
      *
      * @param $response
-     * @return string
+     * @return string|false false when a signed field is missing from the response
      */
     protected function decrypt($response)
     {
@@ -123,7 +127,11 @@ class CitrusGateway implements PaymentGatewayInterface {
 
         $hash_string = '';
         foreach ($hash_vars as $hash_var) {
-            $hash_string .= isset($response[$hash_var]) ? $response[$hash_var] : '';
+            // Every signed field must be present, even when its value is empty.
+            if (!array_key_exists($hash_var, $response)) {
+                return false;
+            }
+            $hash_string .= $response[$hash_var];
         }
 
 

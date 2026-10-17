@@ -52,6 +52,10 @@ class PayUMoneyGatewayTest extends TestCase
             'txnid' => 'TXN1',
             'key' => 'PAYU_KEY',
             'udf1' => 'note',
+            'udf2' => '',
+            'udf3' => '',
+            'udf4' => '',
+            'udf5' => '',
         ];
     }
 
@@ -187,9 +191,9 @@ class PayUMoneyGatewayTest extends TestCase
         $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }
 
-    // Pins current behaviour (see issue #9): a signed field that is empty may
-    // be left out of the callback and the hash still matches.
-    public function test_response_with_an_empty_signed_field_left_out_is_accepted()
+    // PayU sends every signed field, so a callback that leaves one out is not
+    // the one PayU sent, even when the hash still matches (see issue #9).
+    public function test_response_with_an_empty_signed_field_left_out_is_rejected()
     {
         $signed = $this->responseFields();
         $signed['udf1'] = '';
@@ -197,10 +201,7 @@ class PayUMoneyGatewayTest extends TestCase
         $fields['hash'] = $this->responseHash($signed);
         unset($fields['udf1']);
 
-        $response = (new PayUMoneyGateway())->response($this->makeRequest($fields));
-
-        $this->assertSame($fields, $response);
-        $this->assertArrayNotHasKey('udf1', $response);
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }
 
     // Leaving out a field that carried a value still fails.
