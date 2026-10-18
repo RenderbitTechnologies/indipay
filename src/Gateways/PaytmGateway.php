@@ -88,7 +88,7 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
 
         $isValidChecksum = $this->verifychecksum_e($params,$this->MERCHANT_KEY,$checksum);
 
-        if($isValidChecksum == "TRUE" && $request->STATUS == "TXN_SUCCESS"){
+        if($isValidChecksum === true && $request->STATUS == "TXN_SUCCESS"){
             $params['status'] = "success";
             return $params;
         }
@@ -242,13 +242,7 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
         $website_hash = hash("sha256", $finalString);
         $website_hash .= $salt;
 
-        $validFlag = "FALSE";
-        if (is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash)) {
-            $validFlag = "TRUE";
-        } else {
-            $validFlag = "FALSE";
-        }
-        return $validFlag;
+        return is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash);
     }
 
     function verifychecksum_eFromStr($str, $key, $checksumvalue) {
@@ -260,13 +254,7 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
         $website_hash = hash("sha256", $finalString);
         $website_hash .= $salt;
 
-        $validFlag = "FALSE";
-        if (is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash)) {
-            $validFlag = "TRUE";
-        } else {
-            $validFlag = "FALSE";
-        }
-        return $validFlag;
+        return is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash);
     }
 
     function getArray2Str($arrayList) {

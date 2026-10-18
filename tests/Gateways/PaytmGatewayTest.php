@@ -116,8 +116,8 @@ class PaytmGatewayTest extends TestCase
 
         $checksum = $gateway->getChecksumFromArray($params, self::KEY);
 
-        $this->assertSame('TRUE', $gateway->verifychecksum_e($params, self::KEY, $checksum));
-        $this->assertSame('TRUE', $gateway->verifychecksum_e($params + ['CHECKSUMHASH' => $checksum], self::KEY, $checksum));
+        $this->assertTrue($gateway->verifychecksum_e($params, self::KEY, $checksum));
+        $this->assertTrue($gateway->verifychecksum_e($params + ['CHECKSUMHASH' => $checksum], self::KEY, $checksum));
     }
 
     public function test_checksum_is_salted()
@@ -138,7 +138,7 @@ class PaytmGatewayTest extends TestCase
 
         $checksum = $gateway->getChecksumFromArray($params, self::KEY);
 
-        $this->assertSame('FALSE', $gateway->verifychecksum_e(['TXN_AMOUNT' => '1.00'] + $params, self::KEY, $checksum));
+        $this->assertFalse($gateway->verifychecksum_e(['TXN_AMOUNT' => '1.00'] + $params, self::KEY, $checksum));
     }
 
     public function test_checksum_fails_for_the_wrong_key()
@@ -148,7 +148,7 @@ class PaytmGatewayTest extends TestCase
 
         $checksum = $gateway->getChecksumFromArray($params, self::KEY);
 
-        $this->assertSame('FALSE', $gateway->verifychecksum_e($params, 'zzzzzzzz87654321', $checksum));
+        $this->assertFalse($gateway->verifychecksum_e($params, 'zzzzzzzz87654321', $checksum));
     }
 
     public function test_checksum_from_string_verifies()
@@ -157,16 +157,16 @@ class PaytmGatewayTest extends TestCase
 
         $checksum = $gateway->getChecksumFromString('a|b|c', self::KEY);
 
-        $this->assertSame('TRUE', $gateway->verifychecksum_eFromStr('a|b|c', self::KEY, $checksum));
-        $this->assertSame('FALSE', $gateway->verifychecksum_eFromStr('a|b|d', self::KEY, $checksum));
+        $this->assertTrue($gateway->verifychecksum_eFromStr('a|b|c', self::KEY, $checksum));
+        $this->assertFalse($gateway->verifychecksum_eFromStr('a|b|d', self::KEY, $checksum));
     }
 
     public function test_verify_rejects_garbage_checksums()
     {
         $gateway = new PaytmGateway();
 
-        $this->assertSame('FALSE', $gateway->verifychecksum_e(['A' => 'b'], self::KEY, ''));
-        $this->assertSame('FALSE', $gateway->verifychecksum_eFromStr('a|b|c', self::KEY, 'not-a-checksum'));
+        $this->assertFalse($gateway->verifychecksum_e(['A' => 'b'], self::KEY, ''));
+        $this->assertFalse($gateway->verifychecksum_eFromStr('a|b|c', self::KEY, 'not-a-checksum'));
     }
 
     public function test_refund_checksum_verifies_against_the_same_string()
@@ -176,7 +176,7 @@ class PaytmGatewayTest extends TestCase
 
         $checksum = $gateway->getRefundChecksumFromArray($params, self::KEY);
 
-        $this->assertSame('TRUE', $gateway->verifychecksum_eFromStr('one|two', self::KEY, $checksum));
+        $this->assertTrue($gateway->verifychecksum_eFromStr('one|two', self::KEY, $checksum));
     }
 
     public function test_request_adds_a_valid_checksum()
@@ -185,7 +185,7 @@ class PaytmGatewayTest extends TestCase
         $parameters = $this->getProtected($gateway, 'parameters');
 
         $this->assertSame($this->getProtected($gateway, 'checksum'), $parameters['CHECKSUMHASH']);
-        $this->assertSame('TRUE', $gateway->verifychecksum_e($parameters, self::KEY, $parameters['CHECKSUMHASH']));
+        $this->assertTrue($gateway->verifychecksum_e($parameters, self::KEY, $parameters['CHECKSUMHASH']));
     }
 
     public function test_request_requires_order_details()
@@ -311,7 +311,7 @@ class PaytmGatewayTest extends TestCase
         $data = json_decode(urldecode(substr($body, strlen('JsonData='))), true);
         $this->assertSame('PAYTM_MID', $data['MID']);
         $this->assertSame('ORD1', $data['ORDERID']);
-        $this->assertSame('TRUE', (new PaytmGateway())->verifychecksum_e($data, self::KEY, $data['CHECKSUMHASH']));
+        $this->assertTrue((new PaytmGateway())->verifychecksum_e($data, self::KEY, $data['CHECKSUMHASH']));
     }
 
     public function test_status_calls_keep_tls_verification_on()

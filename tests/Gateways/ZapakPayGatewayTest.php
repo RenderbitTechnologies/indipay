@@ -49,18 +49,18 @@ class ZapakPayGatewayTest extends TestCase
         $gateway = new ZapakPayGateway();
         $checksum = hash_hmac('sha256', 'amount=1&', 'secret');
 
-        $this->assertSame(1, $gateway->verifyChecksum($checksum, 'amount=1&', 'secret'));
-        $this->assertSame(0, $gateway->verifyChecksum($checksum, 'amount=2&', 'secret'));
+        $this->assertTrue($gateway->verifyChecksum($checksum, 'amount=1&', 'secret'));
+        $this->assertFalse($gateway->verifyChecksum($checksum, 'amount=2&', 'secret'));
     }
 
     public function test_verify_checksum_rejects_non_string_checksums()
     {
         $gateway = new ZapakPayGateway();
 
-        $this->assertSame(0, $gateway->verifyChecksum(null, 'amount=1&', 'secret'));
-        $this->assertSame(0, $gateway->verifyChecksum(0, 'amount=1&', 'secret'));
-        $this->assertSame(0, $gateway->verifyChecksum(['x'], 'amount=1&', 'secret'));
-        $this->assertSame(0, $gateway->verifyChecksum(true, 'amount=1&', 'secret'));
+        $this->assertFalse($gateway->verifyChecksum(null, 'amount=1&', 'secret'));
+        $this->assertFalse($gateway->verifyChecksum(0, 'amount=1&', 'secret'));
+        $this->assertFalse($gateway->verifyChecksum(['x'], 'amount=1&', 'secret'));
+        $this->assertFalse($gateway->verifyChecksum(true, 'amount=1&', 'secret'));
     }
 
     public function test_sanitized_param_strips_special_characters()
