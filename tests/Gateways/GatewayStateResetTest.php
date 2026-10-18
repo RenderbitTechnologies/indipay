@@ -47,6 +47,6 @@ class GatewayStateResetTest extends TestCase
         // Verifying against the plain fields fails if the first checksum was signed in.
         $parameters = $this->getProtected($gateway, 'parameters');
         unset($parameters['CHECKSUMHASH']);
-        $this->assertSame('TRUE', $gateway->verifychecksum_e($parameters, $this->getProtected($gateway, 'MERCHANT_KEY'), $second));
+        $this->assertTrue($gateway->verifychecksum_e($parameters, $this->getProtected($gateway, 'MERCHANT_KEY'), $second));
     }
 }
