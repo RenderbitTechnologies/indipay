@@ -93,6 +93,14 @@ class InstaMojoGatewayTest extends TestCase
         return new Client(['handler' => HandlerStack::create(new MockHandler([$response]))]);
     }
 
+    private function paymentRequest()
+    {
+        return \Illuminate\Http\Request::create('/indipay/response', 'GET', [
+            'payment_request_id' => 'abc123',
+            'payment_id' => 'def456',
+        ]);
+    }
+
     private $validOrder = ['purpose' => 'Order 1', 'amount' => '100'];
 
     public function test_request_stores_a_successful_reply_for_send()
@@ -159,7 +167,7 @@ class InstaMojoGatewayTest extends TestCase
     {
         $gateway = new InstaMojoGateway($this->clientAnswering(new Response(200, [], '{"success":true,"payment_request":{"id":"r1"}}')));
 
-        $this->assertSame('r1', $gateway->response(null)->payment_request->id);
+        $this->assertSame('r1', $gateway->response($this->paymentRequest())->payment_request->id);
     }
 
     public static function failedResponses()
@@ -177,6 +185,44 @@ class InstaMojoGatewayTest extends TestCase
     {
         $gateway = new InstaMojoGateway($this->clientAnswering($reply));
 
-        $this->assertFalse($gateway->response(null));
+        $this->assertFalse($gateway->response($this->paymentRequest()));
+    }
+
+    public static function unsafeIds()
+    {
+        return [
+            'dot segments' => ['../../x', 'abc123'],
+            'query string' => ['abc?x=1', 'abc123'],
+            'fragment' => ['abc#', 'abc123'],
+            'slash' => ['abc/def', 'abc123'],
+            'payment id with dot segments' => ['abc123', '../x'],
+            'empty request id' => ['', 'abc123'],
+            'missing payment id' => ['abc123', null],
+            'array input' => [['abc'], 'abc123'],
+            'trailing newline' => ["abc\n", 'abc123'],
+        ];
+    }
+
+    #[DataProvider('unsafeIds')]
+    public function test_response_rejects_unsafe_ids_without_calling_the_api($paymentRequestId, $paymentId)
+    {
+        $request = \Illuminate\Http\Request::create('/indipay/response', 'GET', array_filter([
+            'payment_request_id' => $paymentRequestId,
+            'payment_id' => $paymentId,
+        ], function ($value) {
+            return $value !== null;
+        }));
+
+        $this->assertFalse((new InstaMojoGateway())->response($request));
+    }
+
+    public function test_response_reads_ids_from_the_given_request_not_the_facade()
+    {
+        $this->app['request']->query->set('payment_request_id', 'abc123');
+        $this->app['request']->query->set('payment_id', 'def456');
+
+        $request = \Illuminate\Http\Request::create('/indipay/response', 'GET', ['payment_request_id' => '../../x']);
+
+        $this->assertFalse((new InstaMojoGateway())->response($request));
     }
 }

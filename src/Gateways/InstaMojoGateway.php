@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
 use GuzzleHttp\Exception\TransferException;
@@ -13,6 +12,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class InstaMojoGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $merchantData = '';
     protected $encRequest = '';
     protected $testMode = false;
@@ -34,6 +34,8 @@ class InstaMojoGateway implements PaymentGatewayInterface {
         $this->auth_token = Config::get('indipay.instamojo.auth_token');
 
         $this->parameters['redirect_url'] = url(Config::get('indipay.instamojo.redirectUrl'));
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint($param='')
@@ -44,9 +46,11 @@ class InstaMojoGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
+
+        $this->response = '';
 
         $client = $this->client ?: new \GuzzleHttp\Client();
         try {
@@ -105,12 +109,18 @@ class InstaMojoGateway implements PaymentGatewayInterface {
      */
     public function response($request)
     {
-        $payment_request_id = Request::input('payment_request_id');
-        $payment_id = Request::input('payment_id');
+        $payment_request_id = $request->input('payment_request_id');
+        $payment_id = $request->input('payment_id');
+
+        // Both IDs go into the API URL path, so anything that is not a plain
+        // alphanumeric ID (dot segments, '?', '#', '/') is rejected.
+        if (!$this->isValidId($payment_request_id) || !$this->isValidId($payment_id)) {
+            return false;
+        }
 
         $client = $this->client ?: new \GuzzleHttp\Client();
         try {
-            $body = $client->get($this->getEndPoint('payment-requests/'.$payment_request_id.'/'.$payment_id.'/'),
+            $body = $client->get($this->getEndPoint('payment-requests/'.rawurlencode($payment_request_id).'/'.rawurlencode($payment_id).'/'),
                 [
                     'headers'=> array(
                         'X-Api-Key' => $this->api_key,
@@ -153,6 +163,15 @@ class InstaMojoGateway implements PaymentGatewayInterface {
         return (string) $message;
     }
 
+
+    /**
+     * @param mixed $id
+     * @return bool
+     */
+    protected function isValidId($id)
+    {
+        return is_string($id) && preg_match('/\A[A-Za-z0-9]+\z/', $id) === 1;
+    }
 
     /**
      * @param $parameters

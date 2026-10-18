@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 
-class MockerGateway implements PaymentGatewayInterface {
+class MockerGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $service = 'default';
+    protected $testMode = false;
     
     protected $liveEndPoint = 'https://mocker.in/payment/';
     protected $testEndPoint = 'https://mocker.in/payment/';
@@ -26,6 +28,8 @@ class MockerGateway implements PaymentGatewayInterface {
         $this->service = Config::get('indipay.mocker.service');
         $this->testMode = Config::get('indipay.testMode');
         $this->parameters['redirect_url'] = url(Config::get('indipay.mocker.redirect_url'));
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -35,7 +39,7 @@ class MockerGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
 
@@ -64,7 +68,7 @@ class MockerGateway implements PaymentGatewayInterface {
     public function response($request)
     {
         $params = $request->all();
-        if($params['transaction_status'] == 'success'){
+        if(($params['transaction_status'] ?? null) === 'success'){
             $params['status'] = 'success';
             return $params;
         }
