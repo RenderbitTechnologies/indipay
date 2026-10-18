@@ -86,16 +86,18 @@ class CCAvenueGateway implements PaymentGatewayInterface {
 
     /**
      * The merchant data is a raw key=value&key=value string, so a '&' or '='
-     * inside a key or value would inject extra fields. Reject rather than
-     * encode, as CCAvenue is not known to decode urlencoded values.
+     * inside a key, or a '&' inside a value, would inject extra fields. A '='
+     * inside a value is harmless (e.g. a redirect_url with a query string).
+     * Reject rather than encode, as CCAvenue is not known to decode
+     * urlencoded values.
      * @param $parameters
      * @throws IndipayParametersMissingException
      */
     protected function checkDelimiters($parameters)
     {
         foreach ($parameters as $key => $value) {
-            if (strpbrk((string) $key, '&=') !== false || strpbrk((string) $value, '&=') !== false) {
-                throw new IndipayParametersMissingException("Parameter '$key' must not contain '&' or '='.");
+            if (strpbrk((string) $key, '&=') !== false || strpos((string) $value, '&') !== false) {
+                throw new IndipayParametersMissingException("Parameter '$key' must not contain '&' (or '=' in its name).");
             }
         }
     }
@@ -110,8 +112,10 @@ class CCAvenueGateway implements PaymentGatewayInterface {
     {
         $seen = array();
         foreach (explode('&', (string) $rcvdString) as $pair) {
-            $key = explode('=', $pair, 2)[0];
-            if ($key === '') {
+            // Normalise the name the way parse_str() will (url-decoding, '.' -> '_').
+            parse_str($pair, $parsed);
+            $key = key($parsed);
+            if ($key === null) {
                 continue;
             }
             if (isset($seen[$key])) {
