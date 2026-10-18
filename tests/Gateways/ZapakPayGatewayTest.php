@@ -97,6 +97,36 @@ class ZapakPayGatewayTest extends TestCase
         );
     }
 
+    public function test_get_all_params_includes_a_zero_value()
+    {
+        $this->assertSame('showMobile=0&', (new ZapakPayGateway())->getAllParams(['showMobile' => '0']));
+    }
+
+    public function test_posted_fields_are_the_signed_fields()
+    {
+        $gateway = (new ZapakPayGateway())->request($this->validParameters() + [
+            'buyerAddress' => '12, MG Road',
+            'buyerFirstName' => 'A$sha!',
+            'showMobile' => '0',
+        ]);
+
+        $view = $gateway->send();
+        $data = $view->getData();
+
+        $this->assertSame('12 MG Road', $data['params']['buyerAddress']);
+        $this->assertSame('Asha', $data['params']['buyerFirstName']);
+
+        // Re-sign exactly what the view posts and compare with the posted checksum.
+        $signed = $gateway->getAllParams($data['params']);
+        $this->assertStringContainsString('buyerAddress=12 MG Road&', $signed);
+        $this->assertStringContainsString('showMobile=0&', $signed);
+        $this->assertSame(hash_hmac('sha256', $signed, 'ZP_SECRET'), $data['checksum']);
+
+        $html = $view->render();
+        $this->assertStringContainsString('name="buyerAddress" value="12 MG Road"', $html);
+        $this->assertStringContainsString('name="showMobile" value="0"', $html);
+    }
+
     public function test_request_builds_the_checksum()
     {
         $gateway = (new ZapakPayGateway())->request($this->validParameters());
