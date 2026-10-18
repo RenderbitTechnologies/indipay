@@ -15,7 +15,7 @@ class ZapakPayGateway implements PaymentGatewayInterface {
     protected $merchantIdentifier = '';
     protected $checksum = '';
     protected $liveEndPoint = 'https://api.zaakpay.com/api/paymentTransact/V7';
-    protected $testEndPoint = 'https://api.zaakpay.com/api/paymentTransact/V7';
+    protected $testEndPoint = 'https://zaakstaging.zaakpay.com/api/paymentTransact/V7';
     public $response = '';
     protected $checksumSequence = array("amount","bankid","buyerAddress",
                 "buyerCity","buyerCountry","buyerEmail","buyerFirstName","buyerLastName","buyerPhoneNumber","buyerPincode",
