@@ -50,13 +50,13 @@ This adds the following to `composer.json`:
 ]
 ```
 
-Then require the package from the fork's `master` branch:
+Then require the latest 3.x release:
 
 ```bash
-composer require softon/indipay:dev-master
+composer require "softon/indipay:^3.2"
 ```
 
-To pin a release instead, require one of this repository's tags, for example `softon/indipay:^3.2`.
+This installs the newest `3.x` tag at or above `v3.2.0`. To follow unreleased changes on the `master` branch instead, require `softon/indipay:dev-master`.
 
 Laravel finds the service provider and the `Indipay` facade on its own.
 
