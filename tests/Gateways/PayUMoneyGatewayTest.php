@@ -291,6 +291,26 @@ class PayUMoneyGatewayTest extends TestCase
         $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
     }
 
+    public function test_response_with_conflicting_additional_charges_aliases_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['additionalCharges'] = '5.00';
+        $fields['hash'] = hash('sha512', '5.00|'.$this->responseString($fields));
+        $fields['additional_charges'] = '1000';
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_matching_additional_charges_aliases_is_verified()
+    {
+        $fields = $this->responseFields();
+        $fields['additionalCharges'] = '5.00';
+        $fields['additional_charges'] = '5.00';
+        $fields['hash'] = hash('sha512', '5.00|'.$this->responseString($fields));
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
     public function test_response_with_additional_charges_not_in_the_hash_is_rejected()
     {
         $fields = $this->responseFields();
