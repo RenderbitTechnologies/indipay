@@ -88,7 +88,7 @@ to
 App\Http\Middleware\VerifyCsrfMiddleware::class,
 ```
 
-> You may instead keep `VerifyCsrfToken` and add the response routes to its `$except` array.
+> You may instead keep `VerifyCsrfToken` and add the response routes to its `$except` array. This needs no extra class.
 
 *Laravel 11 and above:* there is no `app/Http/Kernel.php`. Swap the middleware in `bootstrap/app.php`:
 
@@ -111,7 +111,7 @@ Edit `config/indipay.php`:
 - One block per gateway (`ccavenue`, `payumoney`, `ebs`, `citrus`, `instamojo`, `zapakpay`, `paytm`, `mocker`) for keys and return URLs. Most values read from `.env` variables, such as `INDIPAY_MERCHANT_ID`, `INDIPAY_WORKING_KEY` or `PAYTM_MERCHANT_KEY`.
 - `ebs.hashAlgorithm`: the hash algorithm your EBS payment page is set to: `md5`, `sha1` or `sha512` (case-insensitive). Read from `INDIPAY_EBS_HASH_ALGORITHM` and defaults to `md5`. It is used for both the request `secure_hash` and the response `SecureHash` check, so it must match the algorithm selected for the page in your EBS account. Any other value makes `EBSGateway` throw an `InvalidArgumentException` when it is created. If your published `config/indipay.php` predates this option, the gateway falls back to `md5`.
 - `payumoney.strictCallbackFields` and `citrus.strictCallbackFields`: when `true`, `response()` rejects a callback that leaves out a field covered by its hash. Read from `INDIPAY_STRICT_CALLBACK_FIELDS` and defaults to `false`. See the note on absent fields below. If your published `config/indipay.php` predates this option, it is off.
-- `remove_csrf_check`: routes the published middleware lets through without a CSRF token.
+- `remove_csrf_check`: routes the published middleware lets through without a CSRF token, in addition to the app's own exclusions (`$except`, or `validateCsrfTokens(except: [...])` on Laravel 11+).
 
 Return URLs are route paths, passed through Laravel's `url()` helper.
 

@@ -57,7 +57,7 @@ class ServiceProviderTest extends TestCase
         $sources = array_map('realpath', array_keys($paths));
 
         $this->assertContains(realpath(__DIR__.'/../src/config/config.php'), $sources);
-        $this->assertContains(realpath(__DIR__.'/../src/views/middleware.blade.php'), $sources);
+        $this->assertContains(realpath(__DIR__.'/../src/stubs/VerifyCsrfMiddleware.stub'), $sources);
         $this->assertContains(base_path('config/indipay.php'), $paths);
         $this->assertContains(base_path('app/Http/Middleware/VerifyCsrfMiddleware.php'), $paths);
     }
