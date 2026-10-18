@@ -239,11 +239,7 @@ class ZapakPayGateway implements PaymentGatewayInterface {
                 
                 $all .= $seqvalue;
                 $all .="=";
-                if ($seqvalue == 'returnUrl') {
-                    $all .= $response[$seqvalue];
-                } else {
-                    $all .= $response[$seqvalue];
-                }
+                $all .= $response[$seqvalue];
                 $all .= "&";
                 
             }

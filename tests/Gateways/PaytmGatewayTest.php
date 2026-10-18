@@ -512,4 +512,42 @@ class PaytmGatewayTest extends TestCase
 
         $this->assertSame('failure', $result['status']);
     }
+
+    public function test_deprecated_status_and_call_aliases_still_work()
+    {
+        $reply = $this->successReply();
+        $gateway = new PaytmGateway($this->client([
+            new Response(200, [], json_encode($reply)),
+            new Response(200, [], json_encode($reply)),
+        ]));
+
+        $this->assertSame($reply, $gateway->getTxnStatus(['ORDERID' => 'ORD1']));
+        $this->assertSame($reply, $gateway->callAPI('https://securegw-stage.paytm.in/order/status', []));
+    }
+
+    public function test_deprecated_noop_methods_keep_their_behaviour()
+    {
+        $gateway = new PaytmGateway();
+
+        $this->assertNull($gateway->redirect2PG(['MID' => 'PAYTM_MID'], self::KEY));
+        $this->assertNull($gateway->initiateTxnRefund(['ORDERID' => 'ORD1']));
+    }
+
+    #[DataProvider('deprecatedMethods')]
+    public function test_dead_methods_are_marked_deprecated($method)
+    {
+        $doc = (new \ReflectionMethod(PaytmGateway::class, $method))->getDocComment();
+
+        $this->assertStringContainsString('@deprecated', (string) $doc);
+    }
+
+    public static function deprecatedMethods()
+    {
+        return array_map(function ($method) {
+            return [$method];
+        }, [
+            'getChecksumFromString', 'verifychecksum_eFromStr', 'redirect2PG', 'getTxnStatus', 'initiateTxnRefund',
+            'callAPI', 'getRefundChecksumFromArray', 'getRefundArray2Str', 'callRefundAPI',
+        ]);
+    }
 }

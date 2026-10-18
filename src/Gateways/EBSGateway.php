@@ -10,8 +10,6 @@ class EBSGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
     protected $testMode = false;
-    protected $merchantKey = '';
-    protected $salt = '';
     protected $hash = '';
     protected $hashAlgorithm = 'md5';
     protected $endPoint = 'https://secure.ebs.in/pg/ma/payment/request';

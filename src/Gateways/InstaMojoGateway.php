@@ -10,8 +10,6 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class InstaMojoGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
-    protected $merchantData = '';
-    protected $encRequest = '';
     protected $testMode = false;
     protected $api_key = '';
     protected $auth_token = '';

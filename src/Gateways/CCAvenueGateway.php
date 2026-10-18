@@ -140,6 +140,7 @@ class CCAvenueGateway implements PaymentGatewayInterface {
      * @param $plainText
      * @param $blockSize
      * @return string
+     * @deprecated Unused, since OpenSSL pads the plain text itself; will be removed in the next major version.
      */
     protected function pkcs5_pad($plainText, $blockSize)
     {

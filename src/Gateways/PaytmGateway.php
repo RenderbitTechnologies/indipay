@@ -9,7 +9,6 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class PaytmGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
-    protected $merchantData = '';
     protected $checksum = '';
     protected $testMode = false;
     protected $MERCHANT_KEY = '';
@@ -218,6 +217,9 @@ class PaytmGateway implements PaymentGatewayInterface {
         $checksum = $this->encrypt_e($hashString, $key);
         return $checksum;
     }
+    /**
+     * @deprecated Unused by the gateway; will be removed in the next major version.
+     */
     function getChecksumFromString($str, $key) {
         
         $salt = $this->generateSalt_e(4);
@@ -249,6 +251,9 @@ class PaytmGateway implements PaymentGatewayInterface {
         return $validFlag;
     }
 
+    /**
+     * @deprecated Unused by the gateway; will be removed in the next major version.
+     */
     function verifychecksum_eFromStr($str, $key, $checksumvalue) {
         $paytm_hash = $this->decrypt_e($checksumvalue, $key);
         $salt = substr($paytm_hash, -4);
@@ -304,6 +309,9 @@ class PaytmGateway implements PaymentGatewayInterface {
         return $paramStr;
     }
 
+    /**
+     * @deprecated It computes a checksum and discards it; will be removed in the next major version.
+     */
     function redirect2PG($paramList, $key) {
         $hashString = $this->getchecksumFromArray($paramList, $key);
         $checksum = $this->encrypt_e($hashString, $key);
@@ -316,6 +324,9 @@ class PaytmGateway implements PaymentGatewayInterface {
         return $arrayList;
     }
 
+    /**
+     * @deprecated Identical to getTxnStatusNew(); use that instead. Will be removed in the next major version.
+     */
     function getTxnStatus($requestParamList) {
         return $this->callAPI($this->getStatusEndPoint(), $requestParamList);
     }
@@ -324,12 +335,18 @@ class PaytmGateway implements PaymentGatewayInterface {
         return $this->callNewAPI($this->getStatusEndPoint(), $requestParamList);
     }
 
+    /**
+     * @deprecated It does nothing and always returns null; will be removed in the next major version.
+     */
     function initiateTxnRefund($requestParamList) {
         //$CHECKSUM = $this->getRefundChecksumFromArray($requestParamList,PAYTM_MERCHANT_KEY,0);
         //$requestParamList["CHECKSUM"] = $CHECKSUM;
         //return $this->callAPI(PAYTM_REFUND_URL, $requestParamList);
     }
 
+    /**
+     * @deprecated Identical to callNewAPI(); use that instead. Will be removed in the next major version.
+     */
     function callAPI($apiURL, $requestParamList) {
         return $this->postJsonData($apiURL, $requestParamList);
     }
@@ -337,6 +354,9 @@ class PaytmGateway implements PaymentGatewayInterface {
     function callNewAPI($apiURL, $requestParamList) {
         return $this->postJsonData($apiURL, $requestParamList);
     }
+    /**
+     * @deprecated Unused by the gateway; will be removed in the next major version.
+     */
     function getRefundChecksumFromArray($arrayList, $key, $sort=1) {
         if ($sort != 0) {
             ksort($arrayList);
@@ -349,6 +369,9 @@ class PaytmGateway implements PaymentGatewayInterface {
         $checksum = $this->encrypt_e($hashString, $key);
         return $checksum;
     }
+    /**
+     * @deprecated Unused by the gateway; will be removed in the next major version.
+     */
     function getRefundArray2Str($arrayList) {	
         $findmepipe = '|';
         $paramStr = "";
@@ -369,6 +392,9 @@ class PaytmGateway implements PaymentGatewayInterface {
         }
         return $paramStr;
     }
+    /**
+     * @deprecated Unused by the gateway; will be removed in the next major version.
+     */
     function callRefundAPI($refundApiURL, $requestParamList) {
         return $this->postJsonData($refundApiURL, $requestParamList);
     }
