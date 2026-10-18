@@ -31,13 +31,38 @@ CI tests the package on PHP 8.1 (Laravel 10) and PHP 8.2–8.4 (Laravel 11 and 1
 
 ## Installation
 
-**Step 1:** Install the package with Composer.
+**Step 1:** Install the package from this fork with Composer. It is not published as a separate package on Packagist. The fork keeps the upstream package name, `softon/indipay`, so you point Composer at this repository and it uses that in place of the upstream release.
+
+Add the repository to your app's `composer.json`:
 
 ```bash
-composer require softon/indipay
+composer config repositories.indipay vcs https://github.com/RenderbitTechnologies/indipay
 ```
 
+This adds the following to `composer.json`:
+
+```json
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "https://github.com/RenderbitTechnologies/indipay"
+    }
+]
+```
+
+Then require the package from the fork's `master` branch:
+
+```bash
+composer require softon/indipay:dev-master
+```
+
+To pin a release instead, require one of this repository's tags, for example `softon/indipay:^3.2`.
+
 Laravel finds the service provider and the `Indipay` facade on its own.
+
+> If you already installed the upstream package, run the `composer config` command above and then `composer update softon/indipay`. Check that `composer.lock` now lists `https://github.com/RenderbitTechnologies/indipay` as the package source.
+>
+> For a private clone or SSH access, use `git@github.com:RenderbitTechnologies/indipay.git` as the repository URL.
 
 **Step 2:** Publish the config file and middleware.
 
