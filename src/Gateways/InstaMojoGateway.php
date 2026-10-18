@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
+use GuzzleHttp\Exception\TransferException;
+use GuzzleHttp\Exception\RequestException;
+use Softon\Indipay\Exceptions\IndipayGatewayException;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 
 class InstaMojoGateway implements PaymentGatewayInterface {
@@ -18,9 +21,14 @@ class InstaMojoGateway implements PaymentGatewayInterface {
     protected $liveEndPoint = 'https://www.instamojo.com/api/1.1/';
     protected $testEndPoint = 'https://test.instamojo.com/api/1.1/';
     public $response = '';
+    protected $client;
 
-    function __construct()
+    /**
+     * @param \GuzzleHttp\ClientInterface|null $client HTTP client for the InstaMojo API
+     */
+    function __construct($client = null)
     {
+        $this->client = $client;
         $this->testMode = Config::get('indipay.testMode');
         $this->api_key = Config::get('indipay.instamojo.api_key');
         $this->auth_token = Config::get('indipay.instamojo.auth_token');
@@ -44,8 +52,9 @@ class InstaMojoGateway implements PaymentGatewayInterface {
 
         $this->response = '';
 
-        $client = new \GuzzleHttp\Client();
-        $response = $client->post($this->getEndPoint('payment-requests/'),
+        $client = $this->client ?: new \GuzzleHttp\Client();
+        try {
+            $body = $client->post($this->getEndPoint('payment-requests/'),
                                         [
                                             'headers'=> array(
                                                 'X-Api-Key' => $this->api_key,
@@ -53,11 +62,28 @@ class InstaMojoGateway implements PaymentGatewayInterface {
                                             ),
                                             'form_params' => $this->parameters,
                                         ])->getBody()->getContents();
-        $response = json_decode($response);
-
-        if($response->success){
-            $this->response = $response;
+        } catch (RequestException $e) {
+            $message = $e->hasResponse() ? $this->errorMessage(json_decode($e->getResponse()->getBody()->getContents())) : null;
+            throw new IndipayGatewayException(
+                'InstaMojo payment request failed: '.($message ?: $e->getMessage()), 0, $e
+            );
+        } catch (TransferException $e) {
+            throw new IndipayGatewayException('InstaMojo payment request failed: '.$e->getMessage(), 0, $e);
         }
+
+        $response = json_decode($body);
+
+        if(!is_object($response)){
+            throw new IndipayGatewayException('InstaMojo returned an invalid response.');
+        }
+
+        if(empty($response->success) || !isset($response->payment_request->longurl)){
+            throw new IndipayGatewayException(
+                'InstaMojo payment request failed: '.($this->errorMessage($response) ?: 'unexpected response.')
+            );
+        }
+
+        $this->response = $response;
 
         return $this;
 
@@ -92,22 +118,49 @@ class InstaMojoGateway implements PaymentGatewayInterface {
             return false;
         }
 
-        $client = new \GuzzleHttp\Client();
-        $response = $client->get($this->getEndPoint('payment-requests/'.rawurlencode($payment_request_id).'/'.rawurlencode($payment_id).'/'),
-            [
-                'headers'=> array(
-                    'X-Api-Key' => $this->api_key,
-                    'X-Auth-Token' => $this->auth_token,
-                ),
-            ])->getBody()->getContents();
-        $response = json_decode($response);
+        $client = $this->client ?: new \GuzzleHttp\Client();
+        try {
+            $body = $client->get($this->getEndPoint('payment-requests/'.rawurlencode($payment_request_id).'/'.rawurlencode($payment_id).'/'),
+                [
+                    'headers'=> array(
+                        'X-Api-Key' => $this->api_key,
+                        'X-Auth-Token' => $this->auth_token,
+                    ),
+                ])->getBody()->getContents();
+        } catch (TransferException $e) {
+            Log::error('Indipay InstaMojo response check failed: '.$e->getMessage());
+            return false;
+        }
 
-        if($response->success){
+        $response = json_decode($body);
+
+        if(is_object($response) && !empty($response->success)){
             return $response;
         }
 
         return false;
 
+    }
+
+    /**
+     * Flatten the error InstaMojo sends back into a single message.
+     * @param mixed $response decoded reply
+     * @return string
+     */
+    protected function errorMessage($response)
+    {
+        if(!is_object($response)){
+            return '';
+        }
+        $message = isset($response->message) ? $response->message : '';
+        if(is_object($message) || is_array($message)){
+            $parts = [];
+            foreach ((array) $message as $field => $errors) {
+                $parts[] = $field.': '.implode(', ', (array) $errors);
+            }
+            return implode('; ', $parts);
+        }
+        return (string) $message;
     }
 
 
