@@ -190,6 +190,7 @@ Paytm and Mocker can look up a payment's status, for example when it is still pe
 // Paytm
 $order = Indipay::gateway('Paytm')->verify([
     'ORDERID' => '3322344231223',
+    'amount' => '1200.00',
 ]);
 
 // Mocker
@@ -197,7 +198,26 @@ $order = Indipay::gateway('Mocker')->verify([
     'transaction_no' => '3322344231223',
     'amount' => '1200.00',
 ]);
+
+if ($order['status'] === 'success') {
+    // Paid in full: fulfil the order.
+}
 ```
+
+Pass the amount you expect, taken from your own records, not from the gateway's callback. Each result carries a `status` of `success` or `failure`, plus the fields the status API returned, if any.
+
+Paytm reports `success` only when all of these hold:
+
+- the status API says `STATUS` is `TXN_SUCCESS`
+- the reply's `ORDERID` is the one you asked about
+- the reply's `MID` is your configured `MID` (a reply that leaves out `MID` is accepted)
+- the reply's `TXNAMOUNT` equals `amount`, compared as numbers (`'100.00'` matches `100`)
+
+If the status call fails (a network or TLS error, a non-200 reply, or a body that is not JSON with a `STATUS`), Paytm's `verify()` returns `['status' => 'failure']` instead of throwing. It returns `false` when `ORDERID` is missing. The call checks Paytm's TLS certificate.
+
+**Calling Paytm's `verify()` without `amount` is deprecated.** It raises an `E_USER_DEPRECATED` notice and accepts any amount, as before. `amount` will be required in the next major version.
+
+Mocker's `verify()` throws `IndipayParametersMissingException` without `transaction_no` and `amount`, and reports `success` only when the reply's `amount` matches.
 
 ## Testing
 

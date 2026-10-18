@@ -18,9 +18,14 @@ class PaytmGateway implements PaymentGatewayInterface {
     protected $statusLiveEndPoint = 'https://securegw.paytm.in/order/status';
     protected $statusTestEndPoint = 'https://securegw-stage.paytm.in/order/status';
     public $response = '';
+    protected $client;
 
-    function __construct()
+    /**
+     * @param \GuzzleHttp\ClientInterface|null $client HTTP client for the status API
+     */
+    function __construct($client = null)
     {
+        $this->client = $client;
         $this->MERCHANT_KEY = Config::get('indipay.paytm.MERCHANT_KEY');
         $this->testMode = Config::get('indipay.testMode');
         $this->parameters['MID'] = Config::get('indipay.paytm.MID');
@@ -88,19 +93,48 @@ class PaytmGateway implements PaymentGatewayInterface {
         return $params;
     }
 
+    /**
+     * Ask Paytm for an order's status.
+     * @param $parameters ORDERID, and the expected amount
+     * @return array|false
+     */
     public function verify($parameters){
         if(!isset($parameters['ORDERID'])){
             return false;
         }
+        if(!isset($parameters['amount'])){
+            trigger_error('Calling PaytmGateway::verify() without an expected "amount" is deprecated; the amount will be required in the next major version.', E_USER_DEPRECATED);
+        }
         $requestParamList = array("MID" => $this->parameters['MID'] , "ORDERID" => $parameters['ORDERID']);  
         $requestParamList['CHECKSUMHASH'] = $this->getChecksumFromArray($requestParamList,$this->MERCHANT_KEY);
-        $responseParamList = (array)$this->getTxnStatusNew($requestParamList);
-        if($responseParamList['STATUS'] == "TXN_SUCCESS"){
+        $responseParamList = $this->getTxnStatusNew($requestParamList);
+        if(!is_array($responseParamList) || !isset($responseParamList['STATUS'])){
+            return ['status' => 'failure'];
+        }
+        if($responseParamList['STATUS'] == "TXN_SUCCESS"
+            && isset($responseParamList['ORDERID'])
+            && (string) $responseParamList['ORDERID'] === (string) $parameters['ORDERID']
+            && (!isset($responseParamList['MID']) || (string) $responseParamList['MID'] === (string) $this->parameters['MID'])
+            && $this->amountMatches($responseParamList, $parameters)){
             $responseParamList['status'] = "success";
             return $responseParamList;
         }
         $responseParamList['status'] = "failure";
         return $responseParamList;
+    }
+
+    /**
+     * Compare the reply's TXNAMOUNT with the expected amount.
+     * Without an expected amount any amount passes, which is deprecated.
+     */
+    protected function amountMatches($responseParamList, $parameters)
+    {
+        if(!isset($parameters['amount'])){
+            return true;
+        }
+        return isset($responseParamList['TXNAMOUNT']) && is_numeric($responseParamList['TXNAMOUNT'])
+            && is_numeric($parameters['amount'])
+            && (float) $responseParamList['TXNAMOUNT'] == (float) $parameters['amount'];
     }
 
 
@@ -296,43 +330,11 @@ class PaytmGateway implements PaymentGatewayInterface {
     }
 
     function callAPI($apiURL, $requestParamList) {
-        $jsonResponse = "";
-        $responseParamList = array();
-        $JsonData =json_encode($requestParamList);
-        $postData = 'JsonData='.urlencode($JsonData);
-        $ch = curl_init($apiURL);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");                                                                     
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);                                                                  
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
-        curl_setopt ($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(                                                                         
-        'Content-Type: application/json', 
-        'Content-Length: ' . strlen($postData))                                                                       
-        );  
-        $jsonResponse = curl_exec($ch);   
-        $responseParamList = json_decode($jsonResponse,true);
-        return $responseParamList;
+        return $this->postJsonData($apiURL, $requestParamList);
     }
 
     function callNewAPI($apiURL, $requestParamList) {
-        $jsonResponse = "";
-        $responseParamList = array();
-        $JsonData =json_encode($requestParamList);
-        $postData = 'JsonData='.urlencode($JsonData);
-        $ch = curl_init($apiURL);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");                                                                     
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);                                                                  
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
-        curl_setopt ($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(                                                                         
-        'Content-Type: application/json', 
-        'Content-Length: ' . strlen($postData))                                                                       
-        );  
-        $jsonResponse = curl_exec($ch);   
-        $responseParamList = json_decode($jsonResponse,true);
-        return $responseParamList;
+        return $this->postJsonData($apiURL, $requestParamList);
     }
     function getRefundChecksumFromArray($arrayList, $key, $sort=1) {
         if ($sort != 0) {
@@ -367,25 +369,31 @@ class PaytmGateway implements PaymentGatewayInterface {
         return $paramStr;
     }
     function callRefundAPI($refundApiURL, $requestParamList) {
-        $jsonResponse = "";
-        $responseParamList = array();
-        $JsonData =json_encode($requestParamList);
-        $postData = 'JsonData='.urlencode($JsonData);
-        $ch = curl_init($refundApiURL);	
-        curl_setopt ($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_URL, $refundApiURL);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);  
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
-        $headers = array();
-        $headers[] = 'Content-Type: application/json';
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);  
-        $jsonResponse = curl_exec($ch);   
-        $responseParamList = json_decode($jsonResponse,true);
-        return $responseParamList;
+        return $this->postJsonData($refundApiURL, $requestParamList);
     }
 
+    /**
+     * POST the parameters as JsonData and decode the JSON reply.
+     * Returns null when the call fails or the reply is not a 200.
+     */
+    protected function postJsonData($apiURL, $requestParamList) {
+        $postData = 'JsonData='.urlencode(json_encode($requestParamList));
+        $client = $this->client ?: new \GuzzleHttp\Client();
+        try {
+            $res = $client->request('POST', $apiURL, [
+                'headers' => ['Content-Type' => 'application/json'],
+                'body' => $postData,
+            ]);
+        } catch (\GuzzleHttp\Exception\TransferException $e) {
+            Log::warning('Indipay Paytm API call failed: '.$e->getMessage());
+            return null;
+        }
+        if($res->getStatusCode() != 200){
+            Log::warning('Indipay Paytm API call returned HTTP '.$res->getStatusCode());
+            return null;
+        }
+        return json_decode((string) $res->getBody(), true);
+    }
 
 
 

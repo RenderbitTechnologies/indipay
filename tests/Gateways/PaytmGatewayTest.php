@@ -2,14 +2,19 @@
 
 namespace Softon\Indipay\Tests\Gateways;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Request as Psr7Request;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Config;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 use Softon\Indipay\Gateways\PaytmGateway;
 use Softon\Indipay\Tests\TestCase;
 
-/**
- * verify() calls the Paytm status API over cURL, so only its guard clause is covered.
- */
 class PaytmGatewayTest extends TestCase
 {
     const KEY = 'abcdefgh12345678';
@@ -237,5 +242,231 @@ class PaytmGatewayTest extends TestCase
     public function test_verify_without_an_order_id_returns_false()
     {
         $this->assertFalse((new PaytmGateway())->verify([]));
+    }
+
+    /**
+     * Build a Guzzle client that answers with the given queue of responses.
+     */
+    protected function client(array $queue, array &$history = [])
+    {
+        $stack = HandlerStack::create(new MockHandler($queue));
+        $stack->push(Middleware::history($history));
+
+        return new Client(['handler' => $stack]);
+    }
+
+    protected function statusClient(array $body, array &$history = [])
+    {
+        return $this->client([new Response(200, [], json_encode($body))], $history);
+    }
+
+    protected function successReply(array $overrides = [])
+    {
+        return $overrides + ['MID' => 'PAYTM_MID', 'ORDERID' => 'ORD1', 'TXNAMOUNT' => '100.00', 'STATUS' => 'TXN_SUCCESS'];
+    }
+
+    /**
+     * Run $callback and return the deprecation messages it raised.
+     */
+    protected function deprecations(callable $callback, &$result = null)
+    {
+        $messages = [];
+        set_error_handler(function ($errno, $errstr) use (&$messages) {
+            $messages[] = $errstr;
+            return true;
+        }, E_USER_DEPRECATED);
+
+        try {
+            $result = $callback();
+        } finally {
+            restore_error_handler();
+        }
+
+        return $messages;
+    }
+
+    public function test_verify_posts_a_signed_json_data_body_to_the_status_endpoint()
+    {
+        $history = [];
+        $client = $this->statusClient($this->successReply(), $history);
+
+        (new PaytmGateway($client))->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $request = $history[0]['request'];
+        $this->assertSame('POST', $request->getMethod());
+        $this->assertSame('https://securegw-stage.paytm.in/order/status', (string) $request->getUri());
+        $this->assertSame('application/json', $request->getHeaderLine('Content-Type'));
+
+        $body = (string) $request->getBody();
+        $this->assertStringStartsWith('JsonData=', $body);
+
+        $data = json_decode(urldecode(substr($body, strlen('JsonData='))), true);
+        $this->assertSame('PAYTM_MID', $data['MID']);
+        $this->assertSame('ORD1', $data['ORDERID']);
+        $this->assertSame('TRUE', (new PaytmGateway())->verifychecksum_e($data, self::KEY, $data['CHECKSUMHASH']));
+    }
+
+    public function test_status_calls_keep_tls_verification_on()
+    {
+        $options = [];
+        $reply = function ($request, array $requestOptions) use (&$options) {
+            $options[] = $requestOptions;
+            return new Response(200, [], json_encode($this->successReply()));
+        };
+        $gateway = new PaytmGateway($this->client([$reply, $reply, $reply]));
+
+        $gateway->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+        $gateway->callAPI('https://securegw-stage.paytm.in/order/status', []);
+        $gateway->callRefundAPI('https://securegw-stage.paytm.in/refund/apply', []);
+
+        $this->assertCount(3, $options);
+        foreach ($options as $requestOptions) {
+            $this->assertNotFalse($requestOptions['verify'] ?? true);
+        }
+    }
+
+    public function test_verify_marks_a_matching_amount_as_success()
+    {
+        $result = (new PaytmGateway($this->statusClient($this->successReply())))
+            ->verify(['ORDERID' => 'ORD1', 'amount' => 100]);
+
+        $this->assertSame($this->successReply() + ['status' => 'success'], $result);
+    }
+
+    public function test_verify_marks_a_matching_zero_amount_as_success()
+    {
+        $result = (new PaytmGateway($this->statusClient($this->successReply(['TXNAMOUNT' => '0.00']))))
+            ->verify(['ORDERID' => 'ORD1', 'amount' => 0]);
+
+        $this->assertSame('success', $result['status']);
+    }
+
+    public function test_verify_marks_a_different_amount_as_failure()
+    {
+        $result = (new PaytmGateway($this->statusClient($this->successReply(['TXNAMOUNT' => '1.00']))))
+            ->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $this->assertSame($this->successReply(['TXNAMOUNT' => '1.00']) + ['status' => 'failure'], $result);
+    }
+
+    public function test_verify_fails_when_the_reply_amount_is_missing_or_not_numeric()
+    {
+        foreach ([null, 'abc', ''] as $amount) {
+            $reply = $this->successReply();
+            $reply['TXNAMOUNT'] = $amount;
+
+            $result = (new PaytmGateway($this->statusClient($reply)))->verify(['ORDERID' => 'ORD1', 'amount' => 0]);
+
+            $this->assertSame('failure', $result['status']);
+        }
+    }
+
+    public function test_verify_fails_when_the_transaction_failed()
+    {
+        $result = (new PaytmGateway($this->statusClient($this->successReply(['STATUS' => 'TXN_FAILURE']))))
+            ->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $this->assertSame('failure', $result['status']);
+    }
+
+    public function test_verify_fails_when_the_reply_is_for_another_order()
+    {
+        $result = (new PaytmGateway($this->statusClient($this->successReply(['ORDERID' => 'ORD2']))))
+            ->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $this->assertSame('failure', $result['status']);
+    }
+
+    public function test_verify_fails_when_the_reply_has_no_order_id()
+    {
+        $reply = $this->successReply();
+        unset($reply['ORDERID']);
+
+        $result = (new PaytmGateway($this->statusClient($reply)))->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $this->assertSame('failure', $result['status']);
+    }
+
+    public function test_verify_fails_when_the_reply_is_for_another_merchant()
+    {
+        $result = (new PaytmGateway($this->statusClient($this->successReply(['MID' => 'OTHER_MID']))))
+            ->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $this->assertSame('failure', $result['status']);
+    }
+
+    public function test_verify_accepts_a_reply_without_a_mid()
+    {
+        $reply = $this->successReply();
+        unset($reply['MID']);
+
+        $result = (new PaytmGateway($this->statusClient($reply)))->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $this->assertSame('success', $result['status']);
+    }
+
+    public static function failedReplies()
+    {
+        return [
+            'connection error' => [new ConnectException('timed out', new Psr7Request('POST', 'https://securegw-stage.paytm.in/order/status'))],
+            'server error' => [new Response(500, [], json_encode(['STATUS' => 'TXN_SUCCESS']))],
+            'non 200 success' => [new Response(202, [], json_encode(['STATUS' => 'TXN_SUCCESS']))],
+            'not json' => [new Response(200, [], '<html>gateway timeout</html>')],
+            'json scalar' => [new Response(200, [], '"TXN_SUCCESS"')],
+            'no status' => [new Response(200, [], json_encode(['ORDERID' => 'ORD1', 'TXNAMOUNT' => '100.00']))],
+        ];
+    }
+
+    #[DataProvider('failedReplies')]
+    public function test_verify_fails_without_throwing_when_the_status_call_fails($reply)
+    {
+        $result = (new PaytmGateway($this->client([$reply])))->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $this->assertSame(['status' => 'failure'], $result);
+    }
+
+    public function test_status_call_returns_null_when_a_client_does_not_throw_on_http_errors()
+    {
+        $client = new Client([
+            'handler' => HandlerStack::create(new MockHandler([new Response(503, [], '{"STATUS":"TXN_SUCCESS"}')])),
+            'http_errors' => false,
+        ]);
+
+        $this->assertNull((new PaytmGateway($client))->callNewAPI('https://securegw-stage.paytm.in/order/status', []));
+    }
+
+    public function test_verify_without_an_amount_is_deprecated_but_keeps_the_old_result()
+    {
+        $gateway = new PaytmGateway($this->statusClient($this->successReply(['TXNAMOUNT' => '1.00'])));
+
+        $messages = $this->deprecations(function () use ($gateway) {
+            return $gateway->verify(['ORDERID' => 'ORD1']);
+        }, $result);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertCount(1, $messages);
+        $this->assertStringContainsString('without an expected "amount" is deprecated', $messages[0]);
+    }
+
+    public function test_verify_with_an_amount_raises_no_deprecation()
+    {
+        $gateway = new PaytmGateway($this->statusClient($this->successReply()));
+
+        $messages = $this->deprecations(function () use ($gateway) {
+            return $gateway->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+        });
+
+        $this->assertSame([], $messages);
+    }
+
+    public function test_verify_without_an_amount_still_checks_the_order_id()
+    {
+        $gateway = new PaytmGateway($this->statusClient($this->successReply(['ORDERID' => 'ORD2'])));
+
+        $this->deprecations(function () use ($gateway) {
+            return $gateway->verify(['ORDERID' => 'ORD1']);
+        }, $result);
+
+        $this->assertSame('failure', $result['status']);
     }
 }
