@@ -19,9 +19,9 @@ class ZapakPayGatewayTest extends TestCase
         ];
     }
 
-    public function test_endpoint_is_the_same_in_both_modes()
+    public function test_endpoints_follow_test_mode()
     {
-        $this->assertSame('https://api.zaakpay.com/api/paymentTransact/V7', (new ZapakPayGateway())->getEndPoint());
+        $this->assertSame('https://zaakstaging.zaakpay.com/api/paymentTransact/V7', (new ZapakPayGateway())->getEndPoint());
 
         Config::set('indipay.testMode', false);
 
@@ -136,7 +136,7 @@ class ZapakPayGatewayTest extends TestCase
         $this->assertSame('indipay::zapakpay', $view->name());
 
         $html = $view->render();
-        $this->assertStringContainsString('action="https://api.zaakpay.com/api/paymentTransact/V7"', $html);
+        $this->assertStringContainsString('action="https://zaakstaging.zaakpay.com/api/paymentTransact/V7"', $html);
         $this->assertStringContainsString('name="orderId" value="ORD1"', $html);
         $this->assertStringContainsString('name="checksum" value="'.$view->getData()['checksum'].'"', $html);
     }
