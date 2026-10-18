@@ -43,8 +43,8 @@ class Indipay {
 
     public function verify($parameters = array())
     {
-        // method_exists() keeps custom gateways that have verify() but predate VerifiesPayments working.
-        if (! $this->gateway instanceof VerifiesPayments && ! method_exists($this->gateway, 'verify')) {
+        // is_callable() keeps custom gateways that have verify() (or proxy it via __call) but predate VerifiesPayments working.
+        if (! $this->gateway instanceof VerifiesPayments && ! is_callable([$this->gateway, 'verify'])) {
             throw new UnsupportedOperationException(sprintf('%s does not support verify().', get_class($this->gateway)));
         }
 

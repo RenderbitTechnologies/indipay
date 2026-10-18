@@ -148,6 +148,18 @@ class IndipayTest extends TestCase
         $this->assertSame(['status' => 'success'], (new Indipay($gateway))->verify([]));
     }
 
+    public function test_verify_still_works_for_a_custom_gateway_that_proxies_verify_through_call()
+    {
+        $gateway = new class implements PaymentGatewayInterface {
+            public function request($parameters) { return $this; }
+            public function send() {}
+            public function response($request) {}
+            public function __call($name, $arguments) { return ['status' => $name]; }
+        };
+
+        $this->assertSame(['status' => 'verify'], (new Indipay($gateway))->verify([]));
+    }
+
     public function test_facade_purchase_runs_through_the_configured_gateway()
     {
         $view = \Indipay::purchase(['transaction_no' => 'TXN1', 'amount' => '100']);
