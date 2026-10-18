@@ -6,9 +6,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 
-class PaytmGateway implements PaymentGatewayInterface {
+class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     /**
      * @deprecated Unused; will be removed in the next major version.
      */
@@ -36,6 +37,8 @@ class PaytmGateway implements PaymentGatewayInterface {
         $this->parameters['CALLBACK_URL'] = url(Config::get('indipay.paytm.REDIRECT_URL'));
         $this->parameters['WEBSITE'] = Config::get('indipay.paytm.WEBSITE');
         $this->parameters['INDUSTRY_TYPE_ID'] = Config::get('indipay.paytm.INDUSTRY_TYPE_ID');
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -50,7 +53,7 @@ class PaytmGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
         
         $this->checksum = $this->getChecksumFromArray($this->parameters,$this->MERCHANT_KEY);
         
@@ -190,7 +193,6 @@ class PaytmGateway implements PaymentGatewayInterface {
 
     function generateSalt_e($length) {
         $random = "";
-        srand((double) microtime() * 1000000);
 
         $data = "AbcDE123IJKLMN67QRSTUVWXYZ";
         $data .= "aBCdefghijklmn123opq45rs67tuv89wxyz";
@@ -247,7 +249,7 @@ class PaytmGateway implements PaymentGatewayInterface {
         $website_hash .= $salt;
 
         $validFlag = "FALSE";
-        if ($website_hash == $paytm_hash) {
+        if (is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash)) {
             $validFlag = "TRUE";
         } else {
             $validFlag = "FALSE";
@@ -268,7 +270,7 @@ class PaytmGateway implements PaymentGatewayInterface {
         $website_hash .= $salt;
 
         $validFlag = "FALSE";
-        if ($website_hash == $paytm_hash) {
+        if (is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash)) {
             $validFlag = "TRUE";
         } else {
             $validFlag = "FALSE";
