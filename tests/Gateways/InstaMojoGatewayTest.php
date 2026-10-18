@@ -2,15 +2,19 @@
 
 namespace Softon\Indipay\Tests\Gateways;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Config;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Softon\Indipay\Exceptions\IndipayGatewayException;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 use Softon\Indipay\Gateways\InstaMojoGateway;
 use Softon\Indipay\Tests\TestCase;
 
 /**
- * request() and response() call the Instamojo API through a Guzzle client the
- * gateway builds itself, so these tests cover everything up to that call.
+ * The Instamojo API is faked with a Guzzle MockHandler injected into the gateway.
  */
 class InstaMojoGatewayTest extends TestCase
 {
@@ -82,5 +86,97 @@ class InstaMojoGatewayTest extends TestCase
         $this->assertSame('indipay::instamojo', $view->name());
         $this->assertSame('https://test.instamojo.com/@x/abc', $view->getData()['longurl']);
         $this->assertStringContainsString('action="https://test.instamojo.com/@x/abc"', $view->render());
+    }
+
+    private function clientAnswering(Response $response)
+    {
+        return new Client(['handler' => HandlerStack::create(new MockHandler([$response]))]);
+    }
+
+    private $validOrder = ['purpose' => 'Order 1', 'amount' => '100'];
+
+    public function test_request_stores_a_successful_reply_for_send()
+    {
+        $body = '{"success":true,"payment_request":{"longurl":"https://test.instamojo.com/@x/abc"}}';
+        $gateway = new InstaMojoGateway($this->clientAnswering(new Response(201, [], $body)));
+
+        $view = $gateway->request($this->validOrder)->send();
+
+        $this->assertSame('https://test.instamojo.com/@x/abc', $view->getData()['longurl']);
+    }
+
+    public function test_request_throws_with_instamojos_message_when_success_is_false()
+    {
+        $gateway = new InstaMojoGateway($this->clientAnswering(new Response(200, [], '{"success":false,"message":"Invalid amount"}')));
+
+        $this->expectException(IndipayGatewayException::class);
+        $this->expectExceptionMessage('Invalid amount');
+
+        $gateway->request($this->validOrder);
+    }
+
+    public function test_request_flattens_field_errors_from_a_4xx_reply()
+    {
+        $body = '{"success":false,"message":{"amount":["Ensure this value is greater than 9."]}}';
+        $gateway = new InstaMojoGateway($this->clientAnswering(new Response(400, [], $body)));
+
+        $this->expectException(IndipayGatewayException::class);
+        $this->expectExceptionMessage('amount: Ensure this value is greater than 9.');
+
+        $gateway->request($this->validOrder);
+    }
+
+    public function test_request_wraps_a_5xx_without_a_json_body()
+    {
+        $gateway = new InstaMojoGateway($this->clientAnswering(new Response(502, [], 'Bad Gateway')));
+
+        $this->expectException(IndipayGatewayException::class);
+        $this->expectExceptionMessage('502');
+
+        $gateway->request($this->validOrder);
+    }
+
+    public function test_request_throws_when_the_body_is_not_json()
+    {
+        $gateway = new InstaMojoGateway($this->clientAnswering(new Response(200, [], '<html>oops</html>')));
+
+        $this->expectException(IndipayGatewayException::class);
+        $this->expectExceptionMessage('invalid response');
+
+        $gateway->request($this->validOrder);
+    }
+
+    public function test_request_throws_when_a_successful_reply_has_no_payment_url()
+    {
+        $gateway = new InstaMojoGateway($this->clientAnswering(new Response(200, [], '{"success":true}')));
+
+        $this->expectException(IndipayGatewayException::class);
+
+        $gateway->request($this->validOrder);
+    }
+
+    public function test_response_returns_the_payment_when_successful()
+    {
+        $gateway = new InstaMojoGateway($this->clientAnswering(new Response(200, [], '{"success":true,"payment_request":{"id":"r1"}}')));
+
+        $this->assertSame('r1', $gateway->response(null)->payment_request->id);
+    }
+
+    public static function failedResponses()
+    {
+        return [
+            'success false' => [new Response(200, [], '{"success":false}')],
+            'not json' => [new Response(200, [], 'nope')],
+            'json scalar' => [new Response(200, [], '"ok"')],
+            'http error' => [new Response(404, [], '{"success":false}')],
+        ];
+    }
+
+    #[DataProvider('failedResponses')]
+    public function test_response_returns_false_when_the_payment_cannot_be_confirmed(Response $reply)
+    {
+        $gateway = new InstaMojoGateway($this->clientAnswering($reply));
+
+        $this->assertFalse($gateway->response(null));
     }
 }
