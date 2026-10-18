@@ -1,13 +1,8 @@
-<html>
-<head>
-    <title>IndiPay</title>
-</head>
-<body>
-    <form method="post" name="redirect" action="{{ $endPoint }}">
+@extends('indipay::layout')
+
+@section('action', $endPoint)
+
+@section('fields')
         <input type=hidden name=encRequest value="{{ $encRequest }}">
         <input type=hidden name=access_code value="{{ $accessCode }}">
-    </form>
-<script language='javascript'>document.redirect.submit();</script>
-</body>
-</html>
-
+@endsection
