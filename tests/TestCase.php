@@ -95,7 +95,6 @@ abstract class TestCase extends Orchestra
     protected function getProtected($object, $property)
     {
         $reflection = new ReflectionProperty($object, $property);
-        $reflection->setAccessible(true);
 
         return $reflection->getValue($object);
     }

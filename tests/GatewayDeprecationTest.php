@@ -22,7 +22,7 @@ class GatewayDeprecationTest extends TestCase
         foreach ([new EBSGateway, new CitrusGateway, new MockerGateway] as $gateway) {
             $declared = array_map(
                 function ($property) { return $property->getName(); },
-                (new \ReflectionObject($gateway))->getProperties()
+                (new \ReflectionClass($gateway))->getProperties()
             );
 
             $this->assertSame([], array_values(array_diff(array_keys(get_object_vars($gateway)), $declared)));
