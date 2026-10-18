@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
-use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Exception\RequestException;
 use Softon\Indipay\Exceptions\IndipayGatewayException;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
@@ -63,7 +63,7 @@ class InstaMojoGateway implements PaymentGatewayInterface {
             throw new IndipayGatewayException(
                 'InstaMojo payment request failed: '.($message ?: $e->getMessage()), 0, $e
             );
-        } catch (GuzzleException $e) {
+        } catch (TransferException $e) {
             throw new IndipayGatewayException('InstaMojo payment request failed: '.$e->getMessage(), 0, $e);
         }
 
@@ -117,7 +117,7 @@ class InstaMojoGateway implements PaymentGatewayInterface {
                         'X-Auth-Token' => $this->auth_token,
                     ),
                 ])->getBody()->getContents();
-        } catch (GuzzleException $e) {
+        } catch (TransferException $e) {
             Log::error('Indipay InstaMojo response check failed: '.$e->getMessage());
             return false;
         }
