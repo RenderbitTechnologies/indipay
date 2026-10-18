@@ -121,7 +121,8 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
     protected function encrypt()
     {
         $this->hash = '';
-        $hashSequence = "key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|udf6|udf7|udf8|udf9|udf10";
+        $hashSequence = "key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|||||";
+        // udf6-udf10 are not posted to PayU, so the five slots after udf5 are always empty.
         $hashVarsSeq = explode('|', $hashSequence);
         $hash_string = '';
 
@@ -146,6 +147,22 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
         $hashSequence = "status||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key";
         $hashVarsSeq = explode('|', $hashSequence);
         $hash_string = $this->salt."|";
+
+        // PayU prepends additional charges to the reverse hash when the account has them.
+        // The exact field name is unconfirmed, so both spellings are accepted; empty means absent.
+        $charges = array();
+        foreach(array('additionalCharges', 'additional_charges') as $chargesField){
+            if(isset($response[$chargesField]) && is_scalar($response[$chargesField]) && (string) $response[$chargesField] !== ''){
+                $charges[] = (string) $response[$chargesField];
+            }
+        }
+        // Both spellings present with different values: only one can be signed, so reject.
+        if(count(array_unique($charges)) > 1){
+            return false;
+        }
+        if($charges){
+            $hash_string = $charges[0]."|".$hash_string;
+        }
 
         foreach($hashVarsSeq as $hash_var) {
             if(array_key_exists($hash_var, $response)){
