@@ -156,6 +156,48 @@ class ZapakPayGatewayTest extends TestCase
         $this->assertStringContainsString('name="showMobile" value="0"', $html);
     }
 
+    public function test_product_info_json_is_posted_and_signed_intact()
+    {
+        $json = '{"offerDetails":[{"offerType":"Discount","offerCode":"X1"}]}';
+
+        $gateway = (new ZapakPayGateway())->request($this->validParameters() + ['productInfo' => $json]);
+
+        $view = $gateway->send();
+        $data = $view->getData();
+
+        $this->assertSame($json, $data['params']['productInfo']);
+        $this->assertNotNull(json_decode($data['params']['productInfo']));
+
+        $signed = $gateway->getAllParams($data['params']);
+        $this->assertStringContainsString('productInfo='.$json.'&', $signed);
+        $this->assertSame(hash_hmac('sha256', $signed, 'ZP_SECRET'), $data['checksum']);
+
+        $html = $view->render();
+        $posted = html_entity_decode(
+            preg_match('/name="productInfo" value="([^"]*)"/', $html, $m) ? $m[1] : '',
+            ENT_QUOTES
+        );
+        $this->assertSame($json, $posted);
+    }
+
+    public function test_product_info_array_is_encoded_to_json()
+    {
+        $info = ['offerDetails' => [['offerType' => 'Discount', 'offerCode' => 'X1']]];
+
+        $gateway = (new ZapakPayGateway())->request($this->validParameters() + ['productInfo' => $info]);
+        $params = $gateway->send()->getData()['params'];
+
+        $this->assertSame(json_encode($info), $params['productInfo']);
+    }
+
+    public function test_product_info_that_cannot_be_encoded_is_rejected()
+    {
+        $this->expectException(IndipayParametersMissingException::class);
+        $this->expectExceptionMessage('productInfo could not be encoded as JSON');
+
+        (new ZapakPayGateway())->request($this->validParameters() + ['productInfo' => ['name' => "\xB1\x31"]]);
+    }
+
     public function test_request_builds_the_checksum()
     {
         $gateway = (new ZapakPayGateway())->request($this->validParameters());

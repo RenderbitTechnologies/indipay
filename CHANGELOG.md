@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- ZapakPay: `productInfo` (a JSON document) is now posted and signed exactly as given instead of going through the generic sanitizer, which stripped its braces, quotes, colons and commas. An array passed as `productInfo` is JSON-encoded. Zaakpay's docs don't say how `productInfo` is included in the checksum, so it is signed raw; check it against Zaakpay's checksum tool before relying on it.
+
 ### Changed
 
 - **ZapakPay: the transaction API moves from `/api/paymentTransact/V7` to `/api/paymentTransact/V13`** on both the live (`https://api.zaakpay.com`) and staging (`https://zaakstaging.zaakpay.com`) hosts. This affects production integrations as well as `testMode`. Confirm V13 is enabled on your Zaakpay account and test against staging before upgrading.
