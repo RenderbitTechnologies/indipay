@@ -1,9 +1,8 @@
-<html>
-<head>
-    <title>IndiPay</title>
-</head>
-<body>
-    <form method="post" name="redirect" action="{{ $endPoint }}">
+@extends('indipay::layout')
+
+@section('action', $endPoint)
+
+@section('fields')
         <input type=hidden name="channel" value="{{ $parameters['channel'] }}">
         <input type=hidden name="account_id" value="{{ $parameters['account_id'] }}">
         <input type=hidden name="reference_no" value="{{ $parameters['reference_no'] }}">
@@ -30,9 +29,4 @@
         <input type=hidden name="ship_phone" value="{{ isset($parameters['ship_phone']) ? $parameters['ship_phone'] : '' }}">
         <input type=hidden name="page_id" value="{{ isset($parameters['page_id']) ? $parameters['page_id'] : '' }}">
         <input type=hidden name="secure_hash" value="{{ $hash }}">
-
-    </form>
-<script language='javascript'>document.redirect.submit();</script>
-</body>
-</html>
-
+@endsection
