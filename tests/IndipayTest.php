@@ -42,12 +42,17 @@ class IndipayTest extends TestCase
         $this->assertInstanceOf($class, $this->getProtected($indipay, 'gateway'));
     }
 
-    public function test_unknown_gateway_name_keeps_the_current_gateway()
+    public function test_unknown_gateway_name_throws()
     {
         $gateway = new MockerGateway();
         $indipay = new Indipay($gateway);
 
-        $indipay->gateway('does-not-exist');
+        try {
+            $indipay->gateway('does-not-exist');
+            $this->fail('Expected InvalidArgumentException');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString('does-not-exist', $e->getMessage());
+        }
 
         $this->assertSame($gateway, $this->getProtected($indipay, 'gateway'));
     }

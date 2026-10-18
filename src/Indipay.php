@@ -86,6 +86,9 @@ class Indipay {
                 $this->gateway = new PaytmGateway();
                 break;
 
+            default:
+                throw new \InvalidArgumentException("Unknown Indipay gateway '{$name}'.");
+
         }
 
         return $this;
