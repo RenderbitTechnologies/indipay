@@ -64,13 +64,13 @@ This adds the following to `composer.json`:
 ]
 ```
 
-Then require the latest 3.x release:
+Then require the latest 4.x release:
 
 ```bash
-composer require "softon/indipay:^3.2"
+composer require "softon/indipay:^4.0"
 ```
 
-This installs the newest `3.x` tag at or above `v3.2.0`. To follow unreleased changes on the `master` branch instead, require `softon/indipay:dev-master`.
+This installs the newest `4.x` tag at or above `v4.0.0`. Read the [changelog](CHANGELOG.md) before upgrading from 3.x: 4.0.0 has breaking changes. To follow unreleased changes on the `master` branch instead, require `softon/indipay:dev-master`.
 
 Laravel finds the service provider and the `Indipay` facade on its own.
 
@@ -282,9 +282,9 @@ Paytm reports `success` only when all of these hold:
 - the reply's `MID` is your configured `MID` (a reply that leaves out `MID` is accepted)
 - the reply's `TXNAMOUNT` equals `amount`, compared as numbers (`'100.00'` matches `100`)
 
-If the status call fails (a network or TLS error, a non-200 reply, or a body that is not JSON with a `STATUS`), Paytm's `verify()` returns `['status' => 'failure']` instead of throwing. It returns `false` when `ORDERID` is missing. The call checks Paytm's TLS certificate.
+If the status call fails (a network or TLS error, a non-200 reply, or a body that is not JSON with a `STATUS`), Paytm's `verify()` returns `['status' => 'failure']` instead of throwing. It returns `false` when `ORDERID` or `amount` is missing. The call checks Paytm's TLS certificate.
 
-**Calling Paytm's `verify()` without `amount` is deprecated.** It raises a silenced `E_USER_DEPRECATED` notice (Laravel 9 and later write it to the deprecations log channel when one is set up) and accepts any amount, as before. `amount` will be required in the next major version.
+**Paytm's `verify()` requires `amount`.** Without it, `verify()` returns `false` and makes no status call. (In 3.x it raised a deprecation notice and accepted any amount.)
 
 Mocker's `verify()` throws `IndipayParametersMissingException` without `transaction_no` and `amount`, and reports `success` only when the reply's `amount` matches.
 

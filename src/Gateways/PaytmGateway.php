@@ -10,10 +10,6 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     protected $parameters = array();
     protected $defaultParameters = array();
-    /**
-     * @deprecated Unused; will be removed in the next major version.
-     */
-    protected $merchantData = '';
     protected $checksum = '';
     protected $testMode = false;
     protected $MERCHANT_KEY = '';
@@ -101,16 +97,12 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     /**
      * Ask Paytm for an order's status.
-     * @param $parameters ORDERID, and the expected amount
+     * @param $parameters ORDERID and the expected amount
      * @return array|false
      */
     public function verify($parameters){
-        if(!isset($parameters['ORDERID'])){
+        if(!isset($parameters['ORDERID']) || !isset($parameters['amount'])){
             return false;
-        }
-        if(!isset($parameters['amount'])){
-            // Silenced so Laravel versions before 9 do not turn it into an ErrorException.
-            @trigger_error('Calling PaytmGateway::verify() without an expected "amount" is deprecated; the amount will be required in the next major version.', E_USER_DEPRECATED);
         }
         $requestParamList = array("MID" => $this->parameters['MID'] , "ORDERID" => $parameters['ORDERID']);  
         $requestParamList['CHECKSUMHASH'] = $this->getChecksumFromArray($requestParamList,$this->MERCHANT_KEY);
@@ -132,13 +124,9 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     /**
      * Compare the reply's TXNAMOUNT with the expected amount.
-     * Without an expected amount any amount passes, which is deprecated.
      */
     protected function amountMatches($responseParamList, $parameters)
     {
-        if(!isset($parameters['amount'])){
-            return true;
-        }
         return isset($responseParamList['TXNAMOUNT']) && is_numeric($responseParamList['TXNAMOUNT'])
             && is_numeric($parameters['amount'])
             && (float) $responseParamList['TXNAMOUNT'] == (float) $parameters['amount'];
@@ -223,18 +211,6 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
         $checksum = $this->encrypt_e($hashString, $key);
         return $checksum;
     }
-    /**
-     * @deprecated Unused by the gateway; will be removed in the next major version.
-     */
-    function getChecksumFromString($str, $key) {
-        
-        $salt = $this->generateSalt_e(4);
-        $finalString = $str . "|" . $salt;
-        $hash = hash("sha256", $finalString);
-        $hashString = $hash . $salt;
-        $checksum = $this->encrypt_e($hashString, $key);
-        return $checksum;
-    }
 
     function verifychecksum_e($arrayList, $key, $checksumvalue) {
         $arrayList = $this->removeCheckSumParam($arrayList);
@@ -251,20 +227,6 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
         return is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash);
     }
 
-    /**
-     * @deprecated Unused by the gateway; will be removed in the next major version.
-     */
-    function verifychecksum_eFromStr($str, $key, $checksumvalue) {
-        $paytm_hash = $this->decrypt_e($checksumvalue, $key);
-        $salt = substr($paytm_hash, -4);
-
-        $finalString = $str . "|" . $salt;
-
-        $website_hash = hash("sha256", $finalString);
-        $website_hash .= $salt;
-
-        return is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash);
-    }
 
     function getArray2Str($arrayList) {
         $findme   = 'REFUND';
@@ -303,13 +265,6 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
         return $paramStr;
     }
 
-    /**
-     * @deprecated It computes a checksum and discards it; will be removed in the next major version.
-     */
-    function redirect2PG($paramList, $key) {
-        $hashString = $this->getchecksumFromArray($paramList, $key);
-        $checksum = $this->encrypt_e($hashString, $key);
-    }
 
     function removeCheckSumParam($arrayList) {
         if (isset($arrayList["CHECKSUMHASH"])) {
@@ -318,79 +273,15 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
         return $arrayList;
     }
 
-    /**
-     * @deprecated Identical to getTxnStatusNew(); use that instead. Will be removed in the next major version.
-     */
-    function getTxnStatus($requestParamList) {
-        return $this->callAPI($this->getStatusEndPoint(), $requestParamList);
-    }
 
     function getTxnStatusNew($requestParamList) {
         return $this->callNewAPI($this->getStatusEndPoint(), $requestParamList);
     }
 
-    /**
-     * @deprecated It does nothing and always returns null; will be removed in the next major version.
-     */
-    function initiateTxnRefund($requestParamList) {
-        //$CHECKSUM = $this->getRefundChecksumFromArray($requestParamList,PAYTM_MERCHANT_KEY,0);
-        //$requestParamList["CHECKSUM"] = $CHECKSUM;
-        //return $this->callAPI(PAYTM_REFUND_URL, $requestParamList);
-    }
 
-    /**
-     * @deprecated Identical to callNewAPI(); use that instead. Will be removed in the next major version.
-     */
-    function callAPI($apiURL, $requestParamList) {
-        return $this->postJsonData($apiURL, $requestParamList);
-    }
 
     function callNewAPI($apiURL, $requestParamList) {
         return $this->postJsonData($apiURL, $requestParamList);
-    }
-    /**
-     * @deprecated Unused by the gateway; will be removed in the next major version.
-     */
-    function getRefundChecksumFromArray($arrayList, $key, $sort=1) {
-        if ($sort != 0) {
-            ksort($arrayList);
-        }
-        $str = $this->getRefundArray2Str($arrayList);
-        $salt = $this->generateSalt_e(4);
-        $finalString = $str . "|" . $salt;
-        $hash = hash("sha256", $finalString);
-        $hashString = $hash . $salt;
-        $checksum = $this->encrypt_e($hashString, $key);
-        return $checksum;
-    }
-    /**
-     * @deprecated Unused by the gateway; will be removed in the next major version.
-     */
-    function getRefundArray2Str($arrayList) {	
-        $findmepipe = '|';
-        $paramStr = "";
-        $flag = 1;	
-        foreach ($arrayList as $key => $value) {		
-            $pospipe = strpos($value, $findmepipe);
-            if ($pospipe !== false) 
-            {
-                continue;
-            }
-            
-            if ($flag) {
-                $paramStr .= $this->checkString_e($value);
-                $flag = 0;
-            } else {
-                $paramStr .= "|" . $this->checkString_e($value);
-            }
-        }
-        return $paramStr;
-    }
-    /**
-     * @deprecated Unused by the gateway; will be removed in the next major version.
-     */
-    function callRefundAPI($refundApiURL, $requestParamList) {
-        return $this->postJsonData($refundApiURL, $requestParamList);
     }
 
     /**

@@ -188,21 +188,6 @@ class CCAvenueGateway implements PaymentGatewayInterface {
         $decryptedText = openssl_decrypt($encryptedText, 'AES-128-CBC', $key, OPENSSL_RAW_DATA, $initVector);
         return $decryptedText;
     }
-  
-
-
-    /**
-     * @param $plainText
-     * @param $blockSize
-     * @return string
-     * @deprecated Unused, since OpenSSL pads the plain text itself; will be removed in the next major version.
-     */
-    protected function pkcs5_pad($plainText, $blockSize)
-    {
-        $pad = $blockSize - (strlen($plainText) % $blockSize);
-        return $plainText . str_repeat(chr($pad), $pad);
-    }
-
 
     /**
      * @param $hexString

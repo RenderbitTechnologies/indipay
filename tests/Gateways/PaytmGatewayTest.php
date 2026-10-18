@@ -105,12 +105,6 @@ class PaytmGatewayTest extends TestCase
         $this->assertSame('one|REFUND|', $string);
     }
 
-    public function test_refund_array_to_string_only_skips_pipe_values()
-    {
-        $string = (new PaytmGateway())->getRefundArray2Str(['A' => 'one', 'B' => 'REFUND', 'C' => 'a|b']);
-
-        $this->assertSame('one|REFUND', $string);
-    }
 
     public function test_remove_checksum_param()
     {
@@ -162,33 +156,14 @@ class PaytmGatewayTest extends TestCase
         $this->assertFalse($gateway->verifychecksum_e($params, 'zzzzzzzz87654321', $checksum));
     }
 
-    public function test_checksum_from_string_verifies()
-    {
-        $gateway = new PaytmGateway();
-
-        $checksum = $gateway->getChecksumFromString('a|b|c', self::KEY);
-
-        $this->assertTrue($gateway->verifychecksum_eFromStr('a|b|c', self::KEY, $checksum));
-        $this->assertFalse($gateway->verifychecksum_eFromStr('a|b|d', self::KEY, $checksum));
-    }
 
     public function test_verify_rejects_garbage_checksums()
     {
         $gateway = new PaytmGateway();
 
         $this->assertFalse($gateway->verifychecksum_e(['A' => 'b'], self::KEY, ''));
-        $this->assertFalse($gateway->verifychecksum_eFromStr('a|b|c', self::KEY, 'not-a-checksum'));
     }
 
-    public function test_refund_checksum_verifies_against_the_same_string()
-    {
-        $gateway = new PaytmGateway();
-        $params = ['B' => 'two', 'A' => 'one'];
-
-        $checksum = $gateway->getRefundChecksumFromArray($params, self::KEY);
-
-        $this->assertTrue($gateway->verifychecksum_eFromStr('one|two', self::KEY, $checksum));
-    }
 
     public function test_request_adds_a_valid_checksum()
     {
@@ -284,26 +259,6 @@ class PaytmGatewayTest extends TestCase
         return $overrides + ['MID' => 'PAYTM_MID', 'ORDERID' => 'ORD1', 'TXNAMOUNT' => '100.00', 'STATUS' => 'TXN_SUCCESS'];
     }
 
-    /**
-     * Run $callback and return the deprecation messages it raised.
-     */
-    protected function deprecations(callable $callback, &$result = null)
-    {
-        $messages = [];
-        set_error_handler(function ($errno, $errstr) use (&$messages) {
-            $messages[] = $errstr;
-            return true;
-        }, E_USER_DEPRECATED);
-
-        try {
-            $result = $callback();
-        } finally {
-            restore_error_handler();
-        }
-
-        return $messages;
-    }
-
     public function test_verify_posts_a_signed_json_data_body_to_the_status_endpoint()
     {
         $history = [];
@@ -335,8 +290,8 @@ class PaytmGatewayTest extends TestCase
         $gateway = new PaytmGateway($this->client([$reply, $reply, $reply]));
 
         $gateway->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
-        $gateway->callAPI('https://securegw-stage.paytm.in/order/status', []);
-        $gateway->callRefundAPI('https://securegw-stage.paytm.in/refund/apply', []);
+        $gateway->getTxnStatusNew(['ORDERID' => 'ORD1']);
+        $gateway->callNewAPI('https://securegw-stage.paytm.in/order/status', []);
 
         $this->assertCount(3, $options);
         foreach ($options as $requestOptions) {
@@ -454,39 +409,7 @@ class PaytmGatewayTest extends TestCase
         $this->assertNull((new PaytmGateway($client))->callNewAPI('https://securegw-stage.paytm.in/order/status', []));
     }
 
-    public function test_verify_without_an_amount_is_deprecated_but_keeps_the_old_result()
-    {
-        $gateway = new PaytmGateway($this->statusClient($this->successReply(['TXNAMOUNT' => '1.00'])));
 
-        $messages = $this->deprecations(function () use ($gateway) {
-            return $gateway->verify(['ORDERID' => 'ORD1']);
-        }, $result);
-
-        $this->assertSame('success', $result['status']);
-        $this->assertCount(1, $messages);
-        $this->assertStringContainsString('without an expected "amount" is deprecated', $messages[0]);
-    }
-
-    public function test_the_deprecation_is_silenced_for_handlers_that_throw_on_reported_errors()
-    {
-        $gateway = new PaytmGateway($this->statusClient($this->successReply()));
-
-        // Laravel before 9 throws for any error that error_reporting() includes.
-        set_error_handler(function ($errno, $errstr) {
-            if (error_reporting() & $errno) {
-                throw new \ErrorException($errstr, 0, $errno);
-            }
-            return true;
-        });
-
-        try {
-            $result = $gateway->verify(['ORDERID' => 'ORD1']);
-        } finally {
-            restore_error_handler();
-        }
-
-        $this->assertSame('success', $result['status']);
-    }
 
     public function test_status_calls_only_need_a_client_with_post()
     {
@@ -510,80 +433,39 @@ class PaytmGatewayTest extends TestCase
         $this->assertStringStartsWith('JsonData=', $client->calls[0][1]['body']);
     }
 
-    public function test_verify_with_an_amount_raises_no_deprecation()
+    public function test_verify_without_an_amount_returns_false_without_calling_paytm()
     {
-        $gateway = new PaytmGateway($this->statusClient($this->successReply()));
+        $history = [];
+        $gateway = new PaytmGateway($this->statusClient($this->successReply(), $history));
 
-        $messages = $this->deprecations(function () use ($gateway) {
-            return $gateway->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
-        });
-
-        $this->assertSame([], $messages);
+        $this->assertFalse($gateway->verify(['ORDERID' => 'ORD1']));
+        $this->assertCount(0, $history);
     }
 
-    public function test_verify_without_an_amount_still_checks_the_order_id()
+    #[DataProvider('removedMembers')]
+    public function test_members_deprecated_in_3_x_are_removed($class, $member)
     {
-        $gateway = new PaytmGateway($this->statusClient($this->successReply(['ORDERID' => 'ORD2'])));
-
-        $this->deprecations(function () use ($gateway) {
-            return $gateway->verify(['ORDERID' => 'ORD1']);
-        }, $result);
-
-        $this->assertSame('failure', $result['status']);
+        $this->assertFalse(method_exists($class, $member) || property_exists($class, $member));
     }
 
-    public function test_deprecated_status_and_call_aliases_still_work()
+    public static function removedMembers()
     {
-        $reply = $this->successReply();
-        $gateway = new PaytmGateway($this->client([
-            new Response(200, [], json_encode($reply)),
-            new Response(200, [], json_encode($reply)),
-        ]));
+        $paytm = PaytmGateway::class;
 
-        $this->assertSame($reply, $gateway->getTxnStatus(['ORDERID' => 'ORD1']));
-        $this->assertSame($reply, $gateway->callAPI('https://securegw-stage.paytm.in/order/status', []));
-    }
-
-    public function test_deprecated_noop_methods_keep_their_behaviour()
-    {
-        $gateway = new PaytmGateway();
-
-        $this->assertNull($gateway->redirect2PG(['MID' => 'PAYTM_MID'], self::KEY));
-        $this->assertNull($gateway->initiateTxnRefund(['ORDERID' => 'ORD1']));
-    }
-
-    #[DataProvider('deprecatedMethods')]
-    public function test_dead_methods_are_marked_deprecated($method)
-    {
-        $doc = (new \ReflectionMethod(PaytmGateway::class, $method))->getDocComment();
-
-        $this->assertStringContainsString('@deprecated', (string) $doc);
-    }
-
-    public static function deprecatedMethods()
-    {
-        return array_map(function ($method) {
-            return [$method];
-        }, [
-            'getChecksumFromString', 'verifychecksum_eFromStr', 'redirect2PG', 'getTxnStatus', 'initiateTxnRefund',
-            'callAPI', 'getRefundChecksumFromArray', 'getRefundArray2Str', 'callRefundAPI',
-        ]);
-    }
-
-    #[DataProvider('unusedProperties')]
-    public function test_unused_protected_properties_stay_declared_as_deprecated($class, $property)
-    {
-        $doc = (new \ReflectionProperty($class, $property))->getDocComment();
-
-        $this->assertStringContainsString('@deprecated', (string) $doc);
-    }
-
-    public static function unusedProperties()
-    {
         return [
-            [PaytmGateway::class, 'merchantData'],
+            [$paytm, 'getChecksumFromString'],
+            [$paytm, 'verifychecksum_eFromStr'],
+            [$paytm, 'redirect2PG'],
+            [$paytm, 'getTxnStatus'],
+            [$paytm, 'initiateTxnRefund'],
+            [$paytm, 'callAPI'],
+            [$paytm, 'getRefundChecksumFromArray'],
+            [$paytm, 'getRefundArray2Str'],
+            [$paytm, 'callRefundAPI'],
+            [$paytm, 'merchantData'],
             [\Softon\Indipay\Gateways\InstaMojoGateway::class, 'merchantData'],
             [\Softon\Indipay\Gateways\InstaMojoGateway::class, 'encRequest'],
+            [\Softon\Indipay\Gateways\CCAvenueGateway::class, 'pkcs5_pad'],
         ];
     }
 }
