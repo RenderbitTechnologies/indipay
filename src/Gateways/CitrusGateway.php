@@ -152,7 +152,7 @@ class CitrusGateway implements PaymentGatewayInterface {
 
     public function generateTransactionID()
     {
-        return substr(hash('sha256', mt_rand() . microtime()), 0, 20);
+        return bin2hex(random_bytes(10));
     }
 
 

@@ -196,7 +196,7 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
         $data .= "0FGH45OP89";
 
         for ($i = 0; $i < $length; $i++) {
-            $random .= substr($data, (rand() % (strlen($data))), 1);
+            $random .= $data[random_int(0, strlen($data) - 1)];
         }
 
         return $random;
