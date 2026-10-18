@@ -96,6 +96,15 @@ class PayUMoneyGatewayTest extends TestCase
         $this->assertSame($expected, $this->getProtected($gateway, 'hash'));
     }
 
+    public function test_request_hash_ignores_udf6_to_udf10()
+    {
+        $gateway = (new PayUMoneyGateway())->request($this->validParameters() + ['udf1' => 'a', 'udf6' => 'x', 'udf10' => 'y']);
+
+        $expected = hash('sha512', 'PAYU_KEY|TXN1|100.00|Widget|Asha|asha@example.com|a||||||||||PAYU_SALT');
+
+        $this->assertSame($expected, $this->getProtected($gateway, 'hash'));
+    }
+
     public function test_request_requires_customer_details()
     {
         $parameters = $this->validParameters();
@@ -262,5 +271,75 @@ class PayUMoneyGatewayTest extends TestCase
         unset($fields['udf1']);
 
         $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public static function additionalChargesFields()
+    {
+        return [
+            'additionalCharges' => ['additionalCharges'],
+            'additional_charges' => ['additional_charges'],
+        ];
+    }
+
+    #[DataProvider('additionalChargesFields')]
+    public function test_response_with_additional_charges_is_verified($field)
+    {
+        $fields = $this->responseFields();
+        $fields[$field] = '5.00';
+        $fields['hash'] = hash('sha512', '5.00|'.$this->responseString($fields));
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_conflicting_additional_charges_aliases_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['additionalCharges'] = '5.00';
+        $fields['hash'] = hash('sha512', '5.00|'.$this->responseString($fields));
+        $fields['additional_charges'] = '1000';
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_matching_additional_charges_aliases_is_verified()
+    {
+        $fields = $this->responseFields();
+        $fields['additionalCharges'] = '5.00';
+        $fields['additional_charges'] = '5.00';
+        $fields['hash'] = hash('sha512', '5.00|'.$this->responseString($fields));
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_additional_charges_not_in_the_hash_is_rejected()
+    {
+        $fields = $this->responseFields();
+        $fields['hash'] = $this->responseHash($fields);
+        $fields['additionalCharges'] = '5.00';
+
+        $this->assertSame('Hash Mismatch Error', (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    public function test_response_with_empty_additional_charges_uses_the_plain_hash()
+    {
+        $fields = $this->responseFields();
+        $fields['additionalCharges'] = '';
+        $fields['hash'] = $this->responseHash($fields);
+
+        $this->assertSame($fields, (new PayUMoneyGateway())->response($this->makeRequest($fields)));
+    }
+
+    protected function responseString(array $fields)
+    {
+        $udfs = [];
+        foreach (['udf5', 'udf4', 'udf3', 'udf2', 'udf1'] as $udf) {
+            $udfs[] = isset($fields[$udf]) ? $fields[$udf] : '';
+        }
+
+        return implode('|', array_merge(
+            ['PAYU_SALT', $fields['status'], '', '', '', '', ''],
+            $udfs,
+            [$fields['email'], $fields['firstname'], $fields['productinfo'], $fields['amount'], $fields['txnid'], $fields['key']]
+        ));
     }
 }

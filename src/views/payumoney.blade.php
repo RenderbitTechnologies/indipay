@@ -1,9 +1,8 @@
-<html>
-<head>
-    <title>IndiPay</title>
-</head>
-<body>
-    <form method="post" name="redirect" action="{{ $endPoint }}">
+@extends('indipay::layout')
+
+@section('action', $endPoint)
+
+@section('fields')
         <input type=hidden name="key" value="{{ $parameters['key'] }}">
         <input type=hidden name="hash" value="{{ $hash }}">
         <input type=hidden name="txnid" value="{{ $parameters['txnid'] }}">
@@ -29,8 +28,4 @@
         <input type=hidden name="udf4" value="{{ isset($parameters['udf4']) ? $parameters['udf4']  : '' }}">
         <input type=hidden name="udf5" value="{{ isset($parameters['udf5']) ? $parameters['udf5']  : '' }}">
         <input type=hidden name="pg" value="{{ isset($parameters['pg']) ? $parameters['pg']  : '' }}">
-    </form>
-<script language='javascript'>document.redirect.submit();</script>
-</body>
-</html>
-
+@endsection

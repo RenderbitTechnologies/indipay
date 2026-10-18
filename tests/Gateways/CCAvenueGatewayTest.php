@@ -206,4 +206,32 @@ class CCAvenueGatewayTest extends TestCase
             'amount' => '100.00',
         ], $response);
     }
+
+    public static function malformedEncRespProvider()
+    {
+        return [
+            'missing' => [[]],
+            'empty' => [['encResp' => '']],
+            'array' => [['encResp' => ['aa']]],
+            'not hex' => [['encResp' => 'zz']],
+            'odd length' => [['encResp' => 'abc']],
+            'not a whole block' => [['encResp' => 'aabbcc']],
+        ];
+    }
+
+    /**
+     * @dataProvider malformedEncRespProvider
+     */
+    public function test_response_returns_an_error_for_a_malformed_enc_resp($input)
+    {
+        $this->assertSame('Decryption Error', (new CCAvenueGateway())->response($this->makeRequest($input)));
+    }
+
+    public function test_response_returns_an_error_when_encrypted_with_another_key()
+    {
+        $gateway = new CCAvenueGateway();
+        $encResp = $gateway->encrypt('order_id=ORD-1&order_status=Success', 'some-other-key');
+
+        $this->assertSame('Decryption Error', $gateway->response($this->makeRequest(['encResp' => $encResp])));
+    }
 }

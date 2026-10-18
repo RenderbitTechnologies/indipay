@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class CCAvenueGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $merchantData = '';
     protected $encRequest = '';
     protected $testMode = false;
@@ -28,6 +29,8 @@ class CCAvenueGateway implements PaymentGatewayInterface {
         $this->parameters['redirect_url'] = url(Config::get('indipay.ccavenue.redirectUrl'));
         $this->parameters['cancel_url'] = url(Config::get('indipay.ccavenue.cancelUrl'));
         $this->parameters['language'] = Config::get('indipay.ccavenue.language');
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -37,12 +40,13 @@ class CCAvenueGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
 
         $this->checkDelimiters($this->parameters);
 
+        $this->merchantData = '';
         foreach($this->parameters as $key=>$value) {
             $this->merchantData .= $key.'='.$value.'&';
         }
@@ -70,13 +74,20 @@ class CCAvenueGateway implements PaymentGatewayInterface {
     /**
      * Check Response
      * @param $request
-     * @return array
+     * @return array|string 'Decryption Error' if encResp is missing, malformed or cannot be decrypted
      */
     public function response($request)
     {
         $encResponse = $request->encResp;
 
+        if (!is_string($encResponse) || $encResponse === '' || strlen($encResponse) % 2 !== 0 || !ctype_xdigit($encResponse)) {
+            return 'Decryption Error';
+        }
+
         $rcvdString = $this->decrypt($encResponse,$this->workingKey);
+        if ($rcvdString === false) {
+            return 'Decryption Error';
+        }
         $this->checkDuplicateKeys($rcvdString);
         parse_str($rcvdString, $decResponse);
 
@@ -173,7 +184,7 @@ class CCAvenueGateway implements PaymentGatewayInterface {
     {
         $key = $this->hextobin(md5($key));
         $initVector = pack("C*", 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f);
-        $encryptedText = $this->hextobin($encryptedText);
+        $encryptedText = hex2bin($encryptedText);
         $decryptedText = openssl_decrypt($encryptedText, 'AES-128-CBC', $key, OPENSSL_RAW_DATA, $initVector);
         return $decryptedText;
     }
