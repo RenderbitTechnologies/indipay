@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class PayUMoneyGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $testMode = false;
     protected $merchantKey = '';
     protected $salt = '';
@@ -32,6 +33,8 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
         $this->parameters['txnid'] = $this->generateTransactionID();
         $this->parameters['surl'] = url(Config::get('indipay.payumoney.successUrl'));
         $this->parameters['furl'] = url(Config::get('indipay.payumoney.failureUrl'));
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -41,7 +44,7 @@ class PayUMoneyGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
 

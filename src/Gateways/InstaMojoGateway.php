@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class InstaMojoGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $merchantData = '';
     protected $encRequest = '';
     protected $testMode = false;
@@ -25,6 +26,8 @@ class InstaMojoGateway implements PaymentGatewayInterface {
         $this->auth_token = Config::get('indipay.instamojo.auth_token');
 
         $this->parameters['redirect_url'] = url(Config::get('indipay.instamojo.redirectUrl'));
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint($param='')
@@ -35,9 +38,11 @@ class InstaMojoGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
+
+        $this->response = '';
 
         $client = new \GuzzleHttp\Client();
         $response = $client->post($this->getEndPoint('payment-requests/'),

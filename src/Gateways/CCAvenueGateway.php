@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class CCAvenueGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $merchantData = '';
     protected $encRequest = '';
     protected $testMode = false;
@@ -28,6 +29,8 @@ class CCAvenueGateway implements PaymentGatewayInterface {
         $this->parameters['redirect_url'] = url(Config::get('indipay.ccavenue.redirectUrl'));
         $this->parameters['cancel_url'] = url(Config::get('indipay.ccavenue.cancelUrl'));
         $this->parameters['language'] = Config::get('indipay.ccavenue.language');
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -37,10 +40,11 @@ class CCAvenueGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
 
+        $this->merchantData = '';
         foreach($this->parameters as $key=>$value) {
             $this->merchantData .= $key.'='.$value.'&';
         }

@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class ZapakPayGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $testMode = false;
     protected $secret = '';
     protected $merchantIdentifier = '';
@@ -25,6 +26,8 @@ class ZapakPayGateway implements PaymentGatewayInterface {
         $this->parameters['merchantIdentifier'] = $this->merchantIdentifier;
         $this->parameters['returnUrl'] = url(Config::get('indipay.zapakpay.returnUrl'));
         
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -34,7 +37,7 @@ class ZapakPayGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
 

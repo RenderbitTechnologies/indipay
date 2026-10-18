@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class CitrusGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $testMode = false;
     protected $secretKey = '';
     protected $hash = '';
@@ -29,6 +30,8 @@ class CitrusGateway implements PaymentGatewayInterface {
         $this->parameters['currency'] = 'INR';
         $this->parameters['returnUrl'] = url(Config::get('indipay.citrus.returnUrl'));
         $this->parameters['notifyUrl'] = url(Config::get('indipay.citrus.notifyUrl'));
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -38,7 +41,7 @@ class CitrusGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
 

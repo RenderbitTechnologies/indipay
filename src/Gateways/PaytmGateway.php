@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $merchantData = '';
     protected $checksum = '';
     protected $testMode = false;
@@ -33,6 +34,8 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
         $this->parameters['CALLBACK_URL'] = url(Config::get('indipay.paytm.REDIRECT_URL'));
         $this->parameters['WEBSITE'] = Config::get('indipay.paytm.WEBSITE');
         $this->parameters['INDUSTRY_TYPE_ID'] = Config::get('indipay.paytm.INDUSTRY_TYPE_ID');
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -47,7 +50,7 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
         
         $this->checksum = $this->getChecksumFromArray($this->parameters,$this->MERCHANT_KEY);
         

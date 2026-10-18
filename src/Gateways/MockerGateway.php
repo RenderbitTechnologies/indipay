@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class MockerGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $service = 'default';
     protected $testMode = false;
     
@@ -27,6 +28,8 @@ class MockerGateway implements PaymentGatewayInterface, VerifiesPayments {
         $this->service = Config::get('indipay.mocker.service');
         $this->testMode = Config::get('indipay.testMode');
         $this->parameters['redirect_url'] = url(Config::get('indipay.mocker.redirect_url'));
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -36,7 +39,7 @@ class MockerGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
 
