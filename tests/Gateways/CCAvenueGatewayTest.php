@@ -123,6 +123,62 @@ class CCAvenueGatewayTest extends TestCase
         (new CCAvenueGateway())->request($this->validParameters() + ['redirect_url' => 'not a url']);
     }
 
+    public function test_request_rejects_ampersand_in_a_value()
+    {
+        $this->expectException(IndipayParametersMissingException::class);
+        $this->expectExceptionMessage('billing_name');
+
+        (new CCAvenueGateway())->request($this->validParameters() + ['billing_name' => 'Bob&amount=1']);
+    }
+
+    public function test_request_rejects_ampersand_or_equals_in_a_name()
+    {
+        $this->expectException(IndipayParametersMissingException::class);
+
+        (new CCAvenueGateway())->request($this->validParameters() + ['a=b' => 'c']);
+    }
+
+    public function test_request_allows_equals_in_a_value()
+    {
+        $gateway = (new CCAvenueGateway())->request($this->validParameters() + ['redirect_url' => 'https://merchant.test/callback?tenant=42']);
+
+        $this->assertStringContainsString('redirect_url=https://merchant.test/callback?tenant=42&', $this->getProtected($gateway, 'merchantData'));
+    }
+
+    public function test_request_allows_spaces_and_punctuation_in_values()
+    {
+        $gateway = (new CCAvenueGateway())->request($this->validParameters() + ['billing_name' => "Bob O'Neil, Jr."]);
+
+        $this->assertStringContainsString("billing_name=Bob O'Neil, Jr.&", $this->getProtected($gateway, 'merchantData'));
+    }
+
+    public function test_response_rejects_duplicate_keys()
+    {
+        $gateway = new CCAvenueGateway();
+        $encrypted = $gateway->encrypt('order_id=1&order_status=Failure&billing_name=x&order_status=Success', 'CCA_WORKING_KEY');
+
+        $this->expectException(IndipayParametersMissingException::class);
+        $this->expectExceptionMessage('order_status');
+
+        $gateway->response((object) ['encResp' => $encrypted]);
+    }
+
+    public function test_response_rejects_duplicate_keys_that_parse_str_normalises_together()
+    {
+        $gateway = new CCAvenueGateway();
+
+        foreach (['order%5Fstatus', 'order.status'] as $alias) {
+            $encrypted = $gateway->encrypt('order_status=Failure&'.$alias.'=Success', 'CCA_WORKING_KEY');
+
+            try {
+                $gateway->response((object) ['encResp' => $encrypted]);
+                $this->fail("Duplicate via '$alias' was accepted.");
+            } catch (IndipayParametersMissingException $e) {
+                $this->assertStringContainsString('order_status', $e->getMessage());
+            }
+        }
+    }
+
     public function test_send_renders_the_redirect_form()
     {
         $view = (new CCAvenueGateway())->request($this->validParameters())->send();

@@ -44,6 +44,8 @@ class CCAvenueGateway implements PaymentGatewayInterface {
 
         $this->checkParameters($this->parameters);
 
+        $this->checkDelimiters($this->parameters);
+
         $this->merchantData = '';
         foreach($this->parameters as $key=>$value) {
             $this->merchantData .= $key.'='.$value.'&';
@@ -86,11 +88,53 @@ class CCAvenueGateway implements PaymentGatewayInterface {
         if ($rcvdString === false) {
             return 'Decryption Error';
         }
+        $this->checkDuplicateKeys($rcvdString);
         parse_str($rcvdString, $decResponse);
 
         return $decResponse;
     }
 
+
+    /**
+     * The merchant data is a raw key=value&key=value string, so a '&' or '='
+     * inside a key, or a '&' inside a value, would inject extra fields. A '='
+     * inside a value is harmless (e.g. a redirect_url with a query string).
+     * Reject rather than encode, as CCAvenue is not known to decode
+     * urlencoded values.
+     * @param $parameters
+     * @throws IndipayParametersMissingException
+     */
+    protected function checkDelimiters($parameters)
+    {
+        foreach ($parameters as $key => $value) {
+            if (strpbrk((string) $key, '&=') !== false || strpos((string) $value, '&') !== false) {
+                throw new IndipayParametersMissingException("Parameter '$key' must not contain '&' (or '=' in its name).");
+            }
+        }
+    }
+
+    /**
+     * parse_str() keeps the last duplicate, so a repeated key in a response
+     * could override a field such as order_status. Treat it as tampering.
+     * @param $rcvdString
+     * @throws IndipayParametersMissingException
+     */
+    protected function checkDuplicateKeys($rcvdString)
+    {
+        $seen = array();
+        foreach (explode('&', (string) $rcvdString) as $pair) {
+            // Normalise the name the way parse_str() will (url-decoding, '.' -> '_').
+            parse_str($pair, $parsed);
+            $key = key($parsed);
+            if ($key === null) {
+                continue;
+            }
+            if (isset($seen[$key])) {
+                throw new IndipayParametersMissingException("Duplicate field '$key' in gateway response.");
+            }
+            $seen[$key] = true;
+        }
+    }
 
     /**
      * @param $parameters
