@@ -185,7 +185,7 @@ class ZapakPayGateway implements PaymentGatewayInterface {
     public function verifyChecksum($checksum, $all, $secret) {
         $cal_checksum = $this->calculateChecksum($secret, $all);
         $bool = 0;
-        if($checksum == $cal_checksum)  {
+        if(is_string($checksum) && hash_equals($cal_checksum, $checksum))  {
             $bool = 1;
         }
         
