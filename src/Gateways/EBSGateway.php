@@ -10,6 +10,14 @@ class EBSGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
     protected $testMode = false;
+    /**
+     * @deprecated Unused; will be removed in the next major version.
+     */
+    protected $merchantKey = '';
+    /**
+     * @deprecated Unused; will be removed in the next major version.
+     */
+    protected $salt = '';
     protected $hash = '';
     protected $hashAlgorithm = 'md5';
     protected $endPoint = 'https://secure.ebs.in/pg/ma/payment/request';

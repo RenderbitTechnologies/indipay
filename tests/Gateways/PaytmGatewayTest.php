@@ -550,4 +550,23 @@ class PaytmGatewayTest extends TestCase
             'callAPI', 'getRefundChecksumFromArray', 'getRefundArray2Str', 'callRefundAPI',
         ]);
     }
+
+    #[DataProvider('unusedProperties')]
+    public function test_unused_protected_properties_stay_declared_as_deprecated($class, $property)
+    {
+        $doc = (new \ReflectionProperty($class, $property))->getDocComment();
+
+        $this->assertStringContainsString('@deprecated', (string) $doc);
+    }
+
+    public static function unusedProperties()
+    {
+        return [
+            [PaytmGateway::class, 'merchantData'],
+            [\Softon\Indipay\Gateways\InstaMojoGateway::class, 'merchantData'],
+            [\Softon\Indipay\Gateways\InstaMojoGateway::class, 'encRequest'],
+            [\Softon\Indipay\Gateways\EBSGateway::class, 'merchantKey'],
+            [\Softon\Indipay\Gateways\EBSGateway::class, 'salt'],
+        ];
+    }
 }

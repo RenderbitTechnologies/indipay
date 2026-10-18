@@ -9,6 +9,10 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class PaytmGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    /**
+     * @deprecated Unused; will be removed in the next major version.
+     */
+    protected $merchantData = '';
     protected $checksum = '';
     protected $testMode = false;
     protected $MERCHANT_KEY = '';
