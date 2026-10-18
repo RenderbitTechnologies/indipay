@@ -21,8 +21,11 @@ abstract class TestCase extends Orchestra
         parent::setUp();
 
         // Laravel logs deprecations instead of raising them; raise them so
-        // package code that triggers one fails the suite.
-        $this->withoutDeprecationHandling();
+        // package code that triggers one fails the suite. Testbench for
+        // Laravel 8 and older has no such helper.
+        if (method_exists($this, 'withoutDeprecationHandling')) {
+            $this->withoutDeprecationHandling();
+        }
     }
 
     protected function getPackageProviders($app)
@@ -96,7 +99,25 @@ abstract class TestCase extends Orchestra
     {
         $reflection = new ReflectionProperty($object, $property);
 
+        // Needed before PHP 8.1, and deprecated from PHP 8.5.
+        if (PHP_VERSION_ID < 80100) {
+            $reflection->setAccessible(true);
+        }
+
         return $reflection->getValue($object);
+    }
+
+    /**
+     * assertMatchesRegularExpression() arrived in PHPUnit 9.1 and
+     * assertRegExp() is gone in PHPUnit 10; PHPUnit 7 and 8 only have the latter.
+     */
+    protected function assertPatternMatches(string $pattern, string $string): void
+    {
+        if (method_exists($this, 'assertMatchesRegularExpression')) {
+            $this->assertMatchesRegularExpression($pattern, $string);
+        } else {
+            $this->assertRegExp($pattern, $string);
+        }
     }
 
     /**

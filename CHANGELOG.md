@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- CI now tests Laravel 5.6 to 9 as well as 10 to 12, on the PHP, Testbench and PHPUnit versions listed in the README. The declared range (`illuminate/support` 5.6 to 12, PHP `^7.1.3|^8.0`) is unchanged. The suite itself now also runs on PHPUnit 7 to 9 (`phpunit.legacy.xml`).
+
 ### Fixed
 
 - ZapakPay: `productInfo` (a JSON document) is now posted and signed exactly as given instead of going through the generic sanitizer, which stripped its braces, quotes, colons and commas. An array passed as `productInfo` is JSON-encoded. Zaakpay's docs don't say how `productInfo` is included in the checksum, so it is signed raw; check it against Zaakpay's checksum tool before relying on it.

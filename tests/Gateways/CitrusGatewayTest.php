@@ -47,7 +47,7 @@ class CitrusGatewayTest extends TestCase
         $this->assertSame('INR', $parameters['currency']);
         $this->assertSame('http://localhost/indipay/response', $parameters['returnUrl']);
         $this->assertSame('http://localhost/indipay/response', $parameters['notifyUrl']);
-        $this->assertMatchesRegularExpression('/^[0-9a-f]{20}$/', $parameters['merchantTxnId']);
+        $this->assertPatternMatches('/^[0-9a-f]{20}$/', $parameters['merchantTxnId']);
     }
 
     public function test_generate_transaction_id_is_unique()
