@@ -182,6 +182,61 @@ To require every signed field, set `INDIPAY_STRICT_CALLBACK_FIELDS=true` (config
 
 Save the transaction details to your database before you send the user to the gateway, so you can check the payment status later.
 
+## After the response
+
+A valid hash, checksum or API reply only proves the gateway sent the data. It does not prove the data is about the order you are fulfilling. A customer can pay for a cheap order and replay its genuine callback against your response route while their session points at an expensive one. Before you mark an order paid:
+
+1. **Look up the order by the gateway's transaction or order ID** in the callback, not by anything in the session or the query string.
+2. **Compare the amount (and currency) with the amount stored for that order.** Use your own record, never a value the user could have sent.
+3. **Check the field that means "paid" for that gateway.** A genuine callback can also report a failed or pending payment.
+4. **Make fulfilment idempotent.** Accept a callback once: mark the order paid in a single atomic update and ignore repeats.
+
+Only rely on signed fields. `response()` returns every field in the request (`$request->all()`), including fields the hash does not cover and any query-string parameters added to your return URL. For PayUMoney and Citrus the signed fields are listed above.
+
+| Gateway | Order ID | Amount | Paid when |
+|---|---|---|---|
+| CCAvenue | `order_id` | `amount` | `order_status` is `Success` |
+| PayUMoney | `txnid` | `amount` | `status` is `success` |
+| Citrus | `TxId` | `amount` | `TxStatus` is `SUCCESS` |
+| Paytm | `ORDERID` | `TXNAMOUNT` | `status` is `success` |
+| EBS | `MerchantRefNo` | `Amount` | `ResponseCode` is `0` |
+| ZapakPay | `orderId` | `amount` | `responseCode` is `100` |
+| InstaMojo | `payment_request->id` | `payment->amount` | `payment->status` is `Credit` |
+| Mocker | Not checked: use `verify()` | | |
+
+The field names above are the ones the gateways document; check them against a real callback from your account. Your own order record is the source of truth for the order and the amount.
+
+InstaMojo's `response()` returns any payment request the API says exists for the IDs in the request, so its ID, amount and `payment->status` must be checked against your order as well.
+
+```php
+public function response(Request $request)
+{
+    $response = Indipay::response($request);
+
+    // PayUMoney is shown; use the fields from the table above for other gateways.
+    if (! is_array($response) || ($response['status'] ?? null) !== 'success') {
+        return redirect('/checkout')->with('error', 'Payment failed.');
+    }
+
+    DB::transaction(function () use ($response) {
+        $order = Order::where('gateway_txn_id', $response['txnid'])->lockForUpdate()->firstOrFail();
+
+        if ($order->isPaid()) {
+            return; // A repeated callback: already fulfilled.
+        }
+
+        // Compare as numbers: '100.00' equals '100'.
+        if ((float) $response['amount'] !== (float) $order->amount) {
+            abort(400, 'Amount mismatch.');
+        }
+
+        $order->markPaid();
+    });
+
+    return redirect('/thank-you');
+}
+```
+
 ## Payment Verification
 
 Paytm and Mocker can look up a payment's status, for example when it is still pending:
