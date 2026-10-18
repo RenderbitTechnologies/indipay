@@ -55,7 +55,7 @@ class IndipayServiceProvider extends ServiceProvider {
     public function boot(){
         $this->publishes([
             __DIR__.'/config/config.php' => base_path('config/indipay.php'),
-            __DIR__.'/views/middleware.blade.php' => base_path('app/Http/Middleware/VerifyCsrfMiddleware.php'),
+            __DIR__.'/stubs/VerifyCsrfMiddleware.stub' => base_path('app/Http/Middleware/VerifyCsrfMiddleware.php'),
         ]);
 
         $this->publishes([
