@@ -21,11 +21,11 @@ class ZapakPayGatewayTest extends TestCase
 
     public function test_endpoints_follow_test_mode()
     {
-        $this->assertSame('https://zaakstaging.zaakpay.com/api/paymentTransact/V7', (new ZapakPayGateway())->getEndPoint());
+        $this->assertSame('https://zaakstaging.zaakpay.com/api/paymentTransact/V13', (new ZapakPayGateway())->getEndPoint());
 
         Config::set('indipay.testMode', false);
 
-        $this->assertSame('https://api.zaakpay.com/api/paymentTransact/V7', (new ZapakPayGateway())->getEndPoint());
+        $this->assertSame('https://api.zaakpay.com/api/paymentTransact/V13', (new ZapakPayGateway())->getEndPoint());
     }
 
     public function test_it_fills_default_parameters()
@@ -176,7 +176,7 @@ class ZapakPayGatewayTest extends TestCase
         $this->assertSame('indipay::zapakpay', $view->name());
 
         $html = $view->render();
-        $this->assertStringContainsString('action="https://zaakstaging.zaakpay.com/api/paymentTransact/V7"', $html);
+        $this->assertStringContainsString('action="https://zaakstaging.zaakpay.com/api/paymentTransact/V13"', $html);
         $this->assertStringContainsString('name="orderId" value="ORD1"', $html);
         $this->assertStringContainsString('name="checksum" value="'.$view->getData()['checksum'].'"', $html);
     }
@@ -193,6 +193,23 @@ class ZapakPayGatewayTest extends TestCase
 
         $this->assertSame(
             'amount=10000&orderId=ORD1&responseCode=100&responseDescription=Transaction Completed Successfully&',
+            $string
+        );
+    }
+
+    public function test_response_sequence_includes_the_v13_fields()
+    {
+        $string = (new ZapakPayGateway())->getAllResponseParams([
+            'pgTransTime' => '2026-10-18 10:00:00',
+            'pgTransId' => 'PG1',
+            'product1Description' => 'P1',
+            'productDescription' => 'P0',
+            'responseDescription' => 'ok',
+            'orderId' => 'ORD1',
+        ]);
+
+        $this->assertSame(
+            'orderId=ORD1&responseDescription=ok&productDescription=P0&product1Description=P1&pgTransId=PG1&pgTransTime=2026-10-18 10:00:00&',
             $string
         );
     }
