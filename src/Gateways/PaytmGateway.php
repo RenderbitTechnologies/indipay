@@ -103,7 +103,8 @@ class PaytmGateway implements PaymentGatewayInterface {
             return false;
         }
         if(!isset($parameters['amount'])){
-            trigger_error('Calling PaytmGateway::verify() without an expected "amount" is deprecated; the amount will be required in the next major version.', E_USER_DEPRECATED);
+            // Silenced so Laravel versions before 9 do not turn it into an ErrorException.
+            @trigger_error('Calling PaytmGateway::verify() without an expected "amount" is deprecated; the amount will be required in the next major version.', E_USER_DEPRECATED);
         }
         $requestParamList = array("MID" => $this->parameters['MID'] , "ORDERID" => $parameters['ORDERID']);  
         $requestParamList['CHECKSUMHASH'] = $this->getChecksumFromArray($requestParamList,$this->MERCHANT_KEY);
@@ -380,7 +381,8 @@ class PaytmGateway implements PaymentGatewayInterface {
         $postData = 'JsonData='.urlencode(json_encode($requestParamList));
         $client = $this->client ?: new \GuzzleHttp\Client();
         try {
-            $res = $client->request('POST', $apiURL, [
+            // post() exists on Guzzle 5's interface and on Guzzle 6/7's Client.
+            $res = $client->post($apiURL, [
                 'headers' => ['Content-Type' => 'application/json'],
                 'body' => $postData,
             ]);

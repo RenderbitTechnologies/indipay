@@ -215,7 +215,7 @@ Paytm reports `success` only when all of these hold:
 
 If the status call fails (a network or TLS error, a non-200 reply, or a body that is not JSON with a `STATUS`), Paytm's `verify()` returns `['status' => 'failure']` instead of throwing. It returns `false` when `ORDERID` is missing. The call checks Paytm's TLS certificate.
 
-**Calling Paytm's `verify()` without `amount` is deprecated.** It raises an `E_USER_DEPRECATED` notice and accepts any amount, as before. `amount` will be required in the next major version.
+**Calling Paytm's `verify()` without `amount` is deprecated.** It raises a silenced `E_USER_DEPRECATED` notice (Laravel 9 and later write it to the deprecations log channel when one is set up) and accepts any amount, as before. `amount` will be required in the next major version.
 
 Mocker's `verify()` throws `IndipayParametersMissingException` without `transaction_no` and `amount`, and reports `success` only when the reply's `amount` matches.
 

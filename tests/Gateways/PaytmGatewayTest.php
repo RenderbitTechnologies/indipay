@@ -448,6 +448,49 @@ class PaytmGatewayTest extends TestCase
         $this->assertStringContainsString('without an expected "amount" is deprecated', $messages[0]);
     }
 
+    public function test_the_deprecation_is_silenced_for_handlers_that_throw_on_reported_errors()
+    {
+        $gateway = new PaytmGateway($this->statusClient($this->successReply()));
+
+        // Laravel before 9 throws for any error that error_reporting() includes.
+        set_error_handler(function ($errno, $errstr) {
+            if (error_reporting() & $errno) {
+                throw new \ErrorException($errstr, 0, $errno);
+            }
+            return true;
+        });
+
+        try {
+            $result = $gateway->verify(['ORDERID' => 'ORD1']);
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame('success', $result['status']);
+    }
+
+    public function test_status_calls_only_need_a_client_with_post()
+    {
+        // Guzzle 5's ClientInterface has post() but no request().
+        $client = new class {
+            public $calls = [];
+
+            public function post($url, array $options = [])
+            {
+                $this->calls[] = [$url, $options];
+
+                return new Response(200, [], json_encode(['MID' => 'PAYTM_MID', 'ORDERID' => 'ORD1', 'TXNAMOUNT' => '100.00', 'STATUS' => 'TXN_SUCCESS']));
+            }
+        };
+
+        $result = (new PaytmGateway($client))->verify(['ORDERID' => 'ORD1', 'amount' => '100.00']);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertSame('https://securegw-stage.paytm.in/order/status', $client->calls[0][0]);
+        $this->assertSame(['Content-Type' => 'application/json'], $client->calls[0][1]['headers']);
+        $this->assertStringStartsWith('JsonData=', $client->calls[0][1]['body']);
+    }
+
     public function test_verify_with_an_amount_raises_no_deprecation()
     {
         $gateway = new PaytmGateway($this->statusClient($this->successReply()));
