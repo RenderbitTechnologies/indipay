@@ -241,7 +241,7 @@ class PaytmGateway implements PaymentGatewayInterface {
         $website_hash .= $salt;
 
         $validFlag = "FALSE";
-        if ($website_hash == $paytm_hash) {
+        if (is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash)) {
             $validFlag = "TRUE";
         } else {
             $validFlag = "FALSE";
@@ -259,7 +259,7 @@ class PaytmGateway implements PaymentGatewayInterface {
         $website_hash .= $salt;
 
         $validFlag = "FALSE";
-        if ($website_hash == $paytm_hash) {
+        if (is_string($paytm_hash) && hash_equals($website_hash, $paytm_hash)) {
             $validFlag = "TRUE";
         } else {
             $validFlag = "FALSE";
