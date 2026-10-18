@@ -14,12 +14,13 @@ class ZapakPayGateway implements PaymentGatewayInterface {
     protected $secret = '';
     protected $merchantIdentifier = '';
     protected $checksum = '';
-    protected $liveEndPoint = 'https://api.zaakpay.com/api/paymentTransact/V7';
-    protected $testEndPoint = 'https://zaakstaging.zaakpay.com/api/paymentTransact/V7';
+    protected $liveEndPoint = 'https://api.zaakpay.com/api/paymentTransact/V13';
+    protected $testEndPoint = 'https://zaakstaging.zaakpay.com/api/paymentTransact/V13';
     public $response = '';
     protected $checksumSequence = array("amount","bankid","buyerAddress",
                 "buyerCity","buyerCountry","buyerEmail","buyerFirstName","buyerLastName","buyerPhoneNumber","buyerPincode",
-                "buyerState","currency","debitorcredit","merchantIdentifier","merchantIpAddress","mode","orderId",
+                "buyerState","couAiId","couRefId","currency","debitorcredit","isAutoRedirect","isPasskeySupported",
+                "merchantIdentifier","merchantIpAddress","mode","orderId","paymentOptionTypes",
                 "product1Description","product2Description","product3Description","product4Description",
                 "productDescription","productInfo","purpose","returnUrl","shipToAddress","shipToCity","shipToCountry",
                 "shipToFirstname","shipToLastname","shipToPhoneNumber","shipToPincode","shipToState","showMobile","txnDate",
@@ -252,7 +253,9 @@ class ZapakPayGateway implements PaymentGatewayInterface {
         $checksumsequence= array("amount","bank","bankid",
                 "cardId","cardScheme","cardToken","cardhashid","doRedirect",
                 "orderId","paymentMethod","paymentMode","responseCode",
-                "responseDescription");
+                "responseDescription","productDescription","product1Description",
+                "product2Description","product3Description","product4Description",
+                "pgTransId","pgTransTime");
         foreach($checksumsequence as $seqvalue) {
             if(array_key_exists($seqvalue, $response)) {
                 
