@@ -41,6 +41,8 @@ class CCAvenueGateway implements PaymentGatewayInterface {
 
         $this->checkParameters($this->parameters);
 
+        $this->checkDelimiters($this->parameters);
+
         foreach($this->parameters as $key=>$value) {
             $this->merchantData .= $key.'='.$value.'&';
         }
@@ -75,11 +77,49 @@ class CCAvenueGateway implements PaymentGatewayInterface {
         $encResponse = $request->encResp;
 
         $rcvdString = $this->decrypt($encResponse,$this->workingKey);
+        $this->checkDuplicateKeys($rcvdString);
         parse_str($rcvdString, $decResponse);
 
         return $decResponse;
     }
 
+
+    /**
+     * The merchant data is a raw key=value&key=value string, so a '&' or '='
+     * inside a key or value would inject extra fields. Reject rather than
+     * encode, as CCAvenue is not known to decode urlencoded values.
+     * @param $parameters
+     * @throws IndipayParametersMissingException
+     */
+    protected function checkDelimiters($parameters)
+    {
+        foreach ($parameters as $key => $value) {
+            if (strpbrk((string) $key, '&=') !== false || strpbrk((string) $value, '&=') !== false) {
+                throw new IndipayParametersMissingException("Parameter '$key' must not contain '&' or '='.");
+            }
+        }
+    }
+
+    /**
+     * parse_str() keeps the last duplicate, so a repeated key in a response
+     * could override a field such as order_status. Treat it as tampering.
+     * @param $rcvdString
+     * @throws IndipayParametersMissingException
+     */
+    protected function checkDuplicateKeys($rcvdString)
+    {
+        $seen = array();
+        foreach (explode('&', (string) $rcvdString) as $pair) {
+            $key = explode('=', $pair, 2)[0];
+            if ($key === '') {
+                continue;
+            }
+            if (isset($seen[$key])) {
+                throw new IndipayParametersMissingException("Duplicate field '$key' in gateway response.");
+            }
+            $seen[$key] = true;
+        }
+    }
 
     /**
      * @param $parameters

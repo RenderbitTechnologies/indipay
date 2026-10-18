@@ -123,6 +123,39 @@ class CCAvenueGatewayTest extends TestCase
         (new CCAvenueGateway())->request($this->validParameters() + ['redirect_url' => 'not a url']);
     }
 
+    public function test_request_rejects_ampersand_in_a_value()
+    {
+        $this->expectException(IndipayParametersMissingException::class);
+        $this->expectExceptionMessage('billing_name');
+
+        (new CCAvenueGateway())->request($this->validParameters() + ['billing_name' => 'Bob&amount=1']);
+    }
+
+    public function test_request_rejects_equals_in_a_value()
+    {
+        $this->expectException(IndipayParametersMissingException::class);
+
+        (new CCAvenueGateway())->request($this->validParameters() + ['merchant_param1' => 'a=b']);
+    }
+
+    public function test_request_allows_spaces_and_punctuation_in_values()
+    {
+        $gateway = (new CCAvenueGateway())->request($this->validParameters() + ['billing_name' => "Bob O'Neil, Jr."]);
+
+        $this->assertStringContainsString("billing_name=Bob O'Neil, Jr.&", $this->getProtected($gateway, 'merchantData'));
+    }
+
+    public function test_response_rejects_duplicate_keys()
+    {
+        $gateway = new CCAvenueGateway();
+        $encrypted = $gateway->encrypt('order_id=1&order_status=Failure&billing_name=x&order_status=Success', 'CCA_WORKING_KEY');
+
+        $this->expectException(IndipayParametersMissingException::class);
+        $this->expectExceptionMessage('order_status');
+
+        $gateway->response((object) ['encResp' => $encrypted]);
+    }
+
     public function test_send_renders_the_redirect_form()
     {
         $view = (new CCAvenueGateway())->request($this->validParameters())->send();
