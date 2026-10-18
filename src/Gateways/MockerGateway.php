@@ -10,6 +10,7 @@ class MockerGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
     protected $service = 'default';
+    protected $testMode = false;
     
     protected $liveEndPoint = 'https://mocker.in/payment/';
     protected $testEndPoint = 'https://mocker.in/payment/';

@@ -16,6 +16,15 @@ abstract class TestCase extends Orchestra
      */
     protected $defaultGateway = 'Mocker';
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Laravel logs deprecations instead of raising them; raise them so
+        // package code that triggers one fails the suite.
+        $this->withoutDeprecationHandling();
+    }
+
     protected function getPackageProviders($app)
     {
         return [IndipayServiceProvider::class];
