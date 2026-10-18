@@ -9,6 +9,8 @@
 
 A Laravel package for Indian payment gateways.
 
+> **About this fork:** This is a maintained fork of [softon/indipay](https://github.com/softon/indipay). The upstream package is no longer maintained and appears to be abandoned, so this fork carries on its development, including support for newer versions of PHP and Laravel. See [Installation](#installation) for how to install it in place of the upstream package.
+
 | Gateway | Name to use in code | Verify support |
 |---|---|---|
 | [CCAvenue](https://www.ccavenue.com/) | `CCAvenue` | No |
