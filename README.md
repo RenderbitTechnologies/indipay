@@ -184,7 +184,7 @@ Save the transaction details to your database before you send the user to the ga
 
 ## Payment Verification
 
-Paytm and Mocker can look up a payment's status, for example when it is still pending:
+Paytm and Mocker can look up a payment's status, for example when it is still pending. Calling `verify()` on any other gateway throws `Softon\Indipay\Exceptions\UnsupportedOperationException`. A custom gateway opts in by implementing `Softon\Indipay\Gateways\VerifiesPayments`:
 
 ```php
 // Paytm

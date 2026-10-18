@@ -3,6 +3,7 @@
 namespace Softon\Indipay\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use Softon\Indipay\Exceptions\UnsupportedOperationException;
 use Softon\Indipay\Gateways\CCAvenueGateway;
 use Softon\Indipay\Gateways\CitrusGateway;
 use Softon\Indipay\Gateways\EBSGateway;
@@ -112,6 +113,51 @@ class IndipayTest extends TestCase
 
         $this->assertSame(['status' => 'success'], (new Indipay($gateway))->verify(['ORDERID' => '1']));
         $this->assertSame(['ORDERID' => '1'], $gateway->verified);
+    }
+
+    public static function gatewaysWithoutVerify()
+    {
+        return [
+            'ccavenue' => [CCAvenueGateway::class],
+            'payumoney' => [PayUMoneyGateway::class],
+            'ebs' => [EBSGateway::class],
+            'citrus' => [CitrusGateway::class],
+            'instamojo' => [InstaMojoGateway::class],
+            'zapakpay' => [ZapakPayGateway::class],
+        ];
+    }
+
+    #[DataProvider('gatewaysWithoutVerify')]
+    public function test_verify_throws_for_a_gateway_without_verify_support($class)
+    {
+        $this->expectException(UnsupportedOperationException::class);
+        $this->expectExceptionMessage($class);
+
+        (new Indipay(new $class()))->verify(['ORDERID' => '1']);
+    }
+
+    public function test_verify_still_works_for_a_custom_gateway_that_has_verify_without_the_interface()
+    {
+        $gateway = new class implements PaymentGatewayInterface {
+            public function request($parameters) { return $this; }
+            public function send() {}
+            public function response($request) {}
+            public function verify($parameters) { return ['status' => 'success']; }
+        };
+
+        $this->assertSame(['status' => 'success'], (new Indipay($gateway))->verify([]));
+    }
+
+    public function test_verify_still_works_for_a_custom_gateway_that_proxies_verify_through_call()
+    {
+        $gateway = new class implements PaymentGatewayInterface {
+            public function request($parameters) { return $this; }
+            public function send() {}
+            public function response($request) {}
+            public function __call($name, $arguments) { return ['status' => $name]; }
+        };
+
+        $this->assertSame(['status' => 'verify'], (new Indipay($gateway))->verify([]));
     }
 
     public function test_facade_purchase_runs_through_the_configured_gateway()

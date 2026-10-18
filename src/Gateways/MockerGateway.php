@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
 use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 
-class MockerGateway implements PaymentGatewayInterface {
+class MockerGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     protected $parameters = array();
     protected $service = 'default';
