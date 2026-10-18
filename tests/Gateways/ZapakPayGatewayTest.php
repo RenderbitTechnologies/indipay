@@ -190,6 +190,14 @@ class ZapakPayGatewayTest extends TestCase
         $this->assertSame(json_encode($info), $params['productInfo']);
     }
 
+    public function test_product_info_that_cannot_be_encoded_is_rejected()
+    {
+        $this->expectException(IndipayParametersMissingException::class);
+        $this->expectExceptionMessage('productInfo could not be encoded as JSON');
+
+        (new ZapakPayGateway())->request($this->validParameters() + ['productInfo' => ['name' => "\xB1\x31"]]);
+    }
+
     public function test_request_builds_the_checksum()
     {
         $gateway = (new ZapakPayGateway())->request($this->validParameters());

@@ -131,11 +131,19 @@ class ZapakPayGateway implements PaymentGatewayInterface {
      *
      * productInfo is a JSON document, so it is posted and signed as given
      * (an array is encoded to JSON first) instead of being stripped.
+     *
+     * @throws IndipayParametersMissingException when productInfo cannot be encoded
      */
     public function sanitizeParameters($params)
     {
         if (array_key_exists('productInfo', $params) && (is_array($params['productInfo']) || is_object($params['productInfo']))) {
-            $params['productInfo'] = json_encode($params['productInfo']);
+            $encoded = json_encode($params['productInfo']);
+
+            if ($encoded === false) {
+                throw new IndipayParametersMissingException('productInfo could not be encoded as JSON: '.json_last_error_msg());
+            }
+
+            $params['productInfo'] = $encoded;
         }
 
         foreach ($this->checksumSequence as $key) {
