@@ -295,7 +295,7 @@ composer install
 composer test
 ```
 
-`composer.lock` pins Laravel 12, which needs PHP 8.2 or later. On PHP 8.1, run `composer update` instead of `composer install` to get versions that work with it.
+The repository does not commit a `composer.lock`, so `composer install` picks the newest versions that work with your PHP: Laravel 12 on PHP 8.2 or later, and Laravel 10 on PHP 8.1.
 
 Tests use [Orchestra Testbench](https://github.com/orchestral/testbench) and make no network calls.
 
