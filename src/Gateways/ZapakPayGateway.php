@@ -128,10 +128,21 @@ class ZapakPayGateway implements PaymentGatewayInterface {
     /**
      * Strip the characters the gateway ignores while signing, so the posted
      * values are identical to the signed ones.
+     *
+     * productInfo is a JSON document, so it is posted and signed as given
+     * (an array is encoded to JSON first) instead of being stripped.
      */
     public function sanitizeParameters($params)
     {
+        if (array_key_exists('productInfo', $params) && (is_array($params['productInfo']) || is_object($params['productInfo']))) {
+            $params['productInfo'] = json_encode($params['productInfo']);
+        }
+
         foreach ($this->checksumSequence as $key) {
+            if ($key == 'productInfo') {
+                continue;
+            }
+
             if (array_key_exists($key, $params) && is_scalar($params[$key])) {
                 $params[$key] = $key == 'returnUrl'
                     ? $this->sanitizedURL($params[$key])
@@ -158,7 +169,11 @@ class ZapakPayGateway implements PaymentGatewayInterface {
                     {
                             $all .= $seqvalue;
                             $all .="=";
-                            if ($seqvalue == 'returnUrl') 
+                            if ($seqvalue == 'productInfo')
+                            {
+                                $all .= $params[$seqvalue];
+                            }
+                            elseif ($seqvalue == 'returnUrl')
                             {
                                 $params[$seqvalue] = $this->sanitizedURL($params[$seqvalue]);
                                 $all .= $this->sanitizedURL($params[$seqvalue]);
