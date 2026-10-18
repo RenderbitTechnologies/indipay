@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class EBSGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $testMode = false;
     protected $merchantKey = '';
     protected $salt = '';
@@ -39,6 +40,8 @@ class EBSGateway implements PaymentGatewayInterface {
         $this->parameters['return_url'] = url(Config::get('indipay.ebs.return_url'));
 
 
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -48,7 +51,7 @@ class EBSGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
 
