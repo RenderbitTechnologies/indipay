@@ -107,7 +107,7 @@ App\Http\Middleware\VerifyCsrfMiddleware::class,
 Edit `config/indipay.php`:
 
 - `gateway`: the default gateway (one of the names in the table above). Defaults to `Mocker`.
-- `testMode`: `true` sends requests to the gateway's sandbox. Set it to `false` in production. **ZapakPay has no sandbox URL:** it posts to the live API in both modes.
+- `testMode`: `true` sends requests to the gateway's sandbox. Set it to `false` in production.
 - One block per gateway (`ccavenue`, `payumoney`, `ebs`, `citrus`, `instamojo`, `zapakpay`, `paytm`, `mocker`) for keys and return URLs. Most values read from `.env` variables, such as `INDIPAY_MERCHANT_ID`, `INDIPAY_WORKING_KEY` or `PAYTM_MERCHANT_KEY`.
 - `ebs.hashAlgorithm`: the hash algorithm your EBS payment page is set to: `md5`, `sha1` or `sha512` (case-insensitive). Read from `INDIPAY_EBS_HASH_ALGORITHM` and defaults to `md5`. It is used for both the request `secure_hash` and the response `SecureHash` check, so it must match the algorithm selected for the page in your EBS account. Any other value makes `EBSGateway` throw an `InvalidArgumentException` when it is created. If your published `config/indipay.php` predates this option, the gateway falls back to `md5`.
 - `payumoney.strictCallbackFields` and `citrus.strictCallbackFields`: when `true`, `response()` rejects a callback that leaves out a field covered by its hash. Read from `INDIPAY_STRICT_CALLBACK_FIELDS` and defaults to `false`. See the note on absent fields below. If your published `config/indipay.php` predates this option, it is off.
