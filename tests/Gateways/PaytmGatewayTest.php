@@ -172,6 +172,14 @@ class PaytmGatewayTest extends TestCase
         $this->assertSame('FALSE', $gateway->verifychecksum_eFromStr('a|b|d', self::KEY, $checksum));
     }
 
+    public function test_verify_rejects_garbage_checksums()
+    {
+        $gateway = new PaytmGateway();
+
+        $this->assertSame('FALSE', $gateway->verifychecksum_e(['A' => 'b'], self::KEY, ''));
+        $this->assertSame('FALSE', $gateway->verifychecksum_eFromStr('a|b|c', self::KEY, 'not-a-checksum'));
+    }
+
     public function test_refund_checksum_verifies_against_the_same_string()
     {
         $gateway = new PaytmGateway();

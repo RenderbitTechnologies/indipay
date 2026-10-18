@@ -9,9 +9,9 @@ return [
     |   gateway = CCAvenue / PayUMoney / EBS / Citrus / InstaMojo / ZapakPay / Paytm / Mocker
     */
 
-    'gateway' => 'Mocker',                // Replace with the name of default gateway you want to use
+    'gateway' => env('INDIPAY_GATEWAY', 'Mocker'),             // Replace with the name of default gateway you want to use
 
-    'testMode'  => true,                   // True for Testing the Gateway [For production false]
+    'testMode'  => env('INDIPAY_TEST_MODE', true),               // True for Testing the Gateway [For production false]
 
     'ccavenue' => [                         // CCAvenue Parameters
         'merchantId'  => env('INDIPAY_MERCHANT_ID', ''),

@@ -1,12 +1,7 @@
-<html>
-<head>
-    <title>IndiPay</title>
-</head>
-<body>
-    <form method="get" name="redirect" action="{{ $longurl }}">
+@extends('indipay::layout')
 
-    </form>
-<script language='javascript'>document.redirect.submit();</script>
-</body>
-</html>
+@section('action', $longurl)
+@section('method', 'get')
 
+@section('fields')
+@endsection
