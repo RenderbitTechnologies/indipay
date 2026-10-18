@@ -99,6 +99,25 @@ class ZapakPayGatewayTest extends TestCase
         );
     }
 
+    public function test_get_all_params_signs_the_v13_options_in_alphabetical_position()
+    {
+        $string = (new ZapakPayGateway())->getAllParams([
+            'paymentOptionTypes' => 'card',
+            'orderId' => 'ORD1',
+            'isPasskeySupported' => 'true',
+            'isAutoRedirect' => 'true',
+            'currency' => 'INR',
+            'couRefId' => 'R1',
+            'couAiId' => 'A1',
+            'buyerState' => 'KA',
+        ]);
+
+        $this->assertSame(
+            'buyerState=KA&couAiId=A1&couRefId=R1&currency=INR&isAutoRedirect=true&isPasskeySupported=true&orderId=ORD1&paymentOptionTypes=card&',
+            $string
+        );
+    }
+
     public function test_get_all_params_sanitizes_values()
     {
         $this->assertSame(

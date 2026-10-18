@@ -19,7 +19,8 @@ class ZapakPayGateway implements PaymentGatewayInterface {
     public $response = '';
     protected $checksumSequence = array("amount","bankid","buyerAddress",
                 "buyerCity","buyerCountry","buyerEmail","buyerFirstName","buyerLastName","buyerPhoneNumber","buyerPincode",
-                "buyerState","currency","debitorcredit","merchantIdentifier","merchantIpAddress","mode","orderId",
+                "buyerState","couAiId","couRefId","currency","debitorcredit","isAutoRedirect","isPasskeySupported",
+                "merchantIdentifier","merchantIpAddress","mode","orderId","paymentOptionTypes",
                 "product1Description","product2Description","product3Description","product4Description",
                 "productDescription","productInfo","purpose","returnUrl","shipToAddress","shipToCity","shipToCountry",
                 "shipToFirstname","shipToLastname","shipToPhoneNumber","shipToPincode","shipToState","showMobile","txnDate",
