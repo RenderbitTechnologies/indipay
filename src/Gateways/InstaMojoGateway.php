@@ -13,7 +13,13 @@ class InstaMojoGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
     protected $defaultParameters = array();
+    /**
+     * @deprecated Unused; will be removed in the next major version.
+     */
     protected $merchantData = '';
+    /**
+     * @deprecated Unused; will be removed in the next major version.
+     */
     protected $encRequest = '';
     protected $testMode = false;
     protected $api_key = '';
