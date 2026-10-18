@@ -55,6 +55,14 @@ jobs:
 
       - name: Install dependencies
         run: |
+          if [ "${{ matrix.legacy }}" = "true" ]; then
+            # The old Laravel, Carbon and PHPUnit releases these jobs test have
+            # known security advisories, which Composer 2.9+ refuses to install
+            # unless told otherwise. Carbon 1 also ships a plugin that Composer
+            # must be told not to run.
+            export COMPOSER_NO_SECURITY_BLOCKING=1
+            composer config --no-plugins allow-plugins.kylekatarnls/update-helper false
+          fi
           composer require "illuminate/support:${{ matrix.laravel }}" --no-update --no-interaction
           composer require --dev "orchestra/testbench:${{ matrix.testbench }}" --no-update --no-interaction
           if [ -n "${{ matrix.phpunit }}" ]; then
