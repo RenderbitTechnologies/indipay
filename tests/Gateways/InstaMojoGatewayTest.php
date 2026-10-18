@@ -83,4 +83,42 @@ class InstaMojoGatewayTest extends TestCase
         $this->assertSame('https://test.instamojo.com/@x/abc', $view->getData()['longurl']);
         $this->assertStringContainsString('action="https://test.instamojo.com/@x/abc"', $view->render());
     }
+
+    public static function unsafeIds()
+    {
+        return [
+            'dot segments' => ['../../x', 'abc123'],
+            'query string' => ['abc?x=1', 'abc123'],
+            'fragment' => ['abc#', 'abc123'],
+            'slash' => ['abc/def', 'abc123'],
+            'payment id with dot segments' => ['abc123', '../x'],
+            'empty request id' => ['', 'abc123'],
+            'missing payment id' => ['abc123', null],
+            'array input' => [['abc'], 'abc123'],
+            'trailing newline' => ["abc\n", 'abc123'],
+        ];
+    }
+
+    #[DataProvider('unsafeIds')]
+    public function test_response_rejects_unsafe_ids_without_calling_the_api($paymentRequestId, $paymentId)
+    {
+        $request = \Illuminate\Http\Request::create('/indipay/response', 'GET', array_filter([
+            'payment_request_id' => $paymentRequestId,
+            'payment_id' => $paymentId,
+        ], function ($value) {
+            return $value !== null;
+        }));
+
+        $this->assertFalse((new InstaMojoGateway())->response($request));
+    }
+
+    public function test_response_reads_ids_from_the_given_request_not_the_facade()
+    {
+        $this->app['request']->query->set('payment_request_id', 'abc123');
+        $this->app['request']->query->set('payment_id', 'def456');
+
+        $request = \Illuminate\Http\Request::create('/indipay/response', 'GET', ['payment_request_id' => '../../x']);
+
+        $this->assertFalse((new InstaMojoGateway())->response($request));
+    }
 }

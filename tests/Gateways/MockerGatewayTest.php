@@ -105,6 +105,14 @@ class MockerGatewayTest extends TestCase
         $this->assertSame('failure', $response['status']);
     }
 
+    public function test_response_marks_missing_transaction_status_as_failed()
+    {
+        $response = (new MockerGateway())->response($this->makeRequest(['transaction_no' => 'TXN1']));
+
+        $this->assertSame('failure', $response['status']);
+        $this->assertSame('TXN1', $response['transaction_no']);
+    }
+
     public static function incompleteVerifyParameters()
     {
         return [

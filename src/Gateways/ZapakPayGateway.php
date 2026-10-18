@@ -9,6 +9,7 @@ use Softon\Indipay\Exceptions\IndipayParametersMissingException;
 class ZapakPayGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
+    protected $defaultParameters = array();
     protected $testMode = false;
     protected $secret = '';
     protected $merchantIdentifier = '';
@@ -16,6 +17,13 @@ class ZapakPayGateway implements PaymentGatewayInterface {
     protected $liveEndPoint = 'https://api.zaakpay.com/api/paymentTransact/V7';
     protected $testEndPoint = 'https://zaakstaging.zaakpay.com/api/paymentTransact/V7';
     public $response = '';
+    protected $checksumSequence = array("amount","bankid","buyerAddress",
+                "buyerCity","buyerCountry","buyerEmail","buyerFirstName","buyerLastName","buyerPhoneNumber","buyerPincode",
+                "buyerState","currency","debitorcredit","merchantIdentifier","merchantIpAddress","mode","orderId",
+                "product1Description","product2Description","product3Description","product4Description",
+                "productDescription","productInfo","purpose","returnUrl","shipToAddress","shipToCity","shipToCountry",
+                "shipToFirstname","shipToLastname","shipToPhoneNumber","shipToPincode","shipToState","showMobile","txnDate",
+                "txnType","zpPayOption");
 
     function __construct()
     {
@@ -25,6 +33,8 @@ class ZapakPayGateway implements PaymentGatewayInterface {
         $this->parameters['merchantIdentifier'] = $this->merchantIdentifier;
         $this->parameters['returnUrl'] = url(Config::get('indipay.zapakpay.returnUrl'));
         
+
+        $this->defaultParameters = $this->parameters;
     }
 
     public function getEndPoint()
@@ -34,9 +44,12 @@ class ZapakPayGateway implements PaymentGatewayInterface {
 
     public function request($parameters)
     {
-        $this->parameters = array_merge($this->parameters,$parameters);
+        $this->parameters = array_merge($this->defaultParameters,$parameters);
 
         $this->checkParameters($this->parameters);
+
+        // Posted fields must be the exact values that get signed.
+        $this->parameters = $this->sanitizeParameters($this->parameters);
 
         $encodeString = $this->getAllParams($this->parameters);
         $this->checksum = $this->calculateChecksum($this->secret,$encodeString);
@@ -111,23 +124,34 @@ class ZapakPayGateway implements PaymentGatewayInterface {
     }
 
 
+    /**
+     * Strip the characters the gateway ignores while signing, so the posted
+     * values are identical to the signed ones.
+     */
+    public function sanitizeParameters($params)
+    {
+        foreach ($this->checksumSequence as $key) {
+            if (array_key_exists($key, $params) && is_scalar($params[$key])) {
+                $params[$key] = $key == 'returnUrl'
+                    ? $this->sanitizedURL($params[$key])
+                    : $this->sanitizedParam($params[$key]);
+            }
+        }
+
+        return $params;
+    }
+
     public function getAllParams($params) {
         //ksort($_POST);
         $all = '';
         
         
-        $checksumsequence= array("amount","bankid","buyerAddress",
-                "buyerCity","buyerCountry","buyerEmail","buyerFirstName","buyerLastName","buyerPhoneNumber","buyerPincode",
-                "buyerState","currency","debitorcredit","merchantIdentifier","merchantIpAddress","mode","orderId",
-                "product1Description","product2Description","product3Description","product4Description",
-                "productDescription","productInfo","purpose","returnUrl","shipToAddress","shipToCity","shipToCountry",
-                "shipToFirstname","shipToLastname","shipToPhoneNumber","shipToPincode","shipToState","showMobile","txnDate",
-                "txnType","zpPayOption");
+        $checksumsequence= $this->checksumSequence;
         
         
         foreach($checksumsequence as $seqvalue) {
             if(array_key_exists($seqvalue, $params)) {
-                if(!$params[$seqvalue]=="")
+                if((string) $params[$seqvalue] !== '')
                 {
                     if($seqvalue != 'checksum') 
                     {
@@ -161,7 +185,7 @@ class ZapakPayGateway implements PaymentGatewayInterface {
     public function verifyChecksum($checksum, $all, $secret) {
         $cal_checksum = $this->calculateChecksum($secret, $all);
         $bool = 0;
-        if($checksum == $cal_checksum)  {
+        if(is_string($checksum) && hash_equals($cal_checksum, $checksum))  {
             $bool = 1;
         }
         

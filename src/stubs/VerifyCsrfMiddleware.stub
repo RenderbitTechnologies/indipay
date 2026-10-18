@@ -1,0 +1,15 @@
+<?php namespace App\Http\Middleware;
+
+use Illuminate\Support\Facades\Config;
+
+class VerifyCsrfMiddleware extends \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken {
+
+    protected function inExceptArray($request)
+    {
+        foreach ((array) Config::get('indipay.remove_csrf_check', []) as $route)
+            if ($request->is($route))
+                return true;
+
+        return parent::inExceptArray($request);
+    }
+}

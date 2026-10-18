@@ -3,7 +3,7 @@
 [![Tests](https://github.com/RenderbitTechnologies/indipay/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/RenderbitTechnologies/indipay/actions/workflows/tests.yml)
 [![PHP](https://img.shields.io/badge/PHP-8.1%E2%80%938.4-777BB4?logo=php&logoColor=white)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/Laravel-5.6%E2%80%9312-FF2D20?logo=laravel&logoColor=white)](https://laravel.com/)
-[![Guzzle](https://img.shields.io/badge/Guzzle-5%E2%80%937-4B8BBE)](https://docs.guzzlephp.org/)
+[![Guzzle](https://img.shields.io/badge/Guzzle-6%E2%80%937-4B8BBE)](https://docs.guzzlephp.org/)
 [![PHPUnit](https://img.shields.io/badge/PHPUnit-10%20%7C%2011-3C9CD7)](https://phpunit.de/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -27,7 +27,7 @@ A Laravel package for Indian payment gateways.
 ## Requirements
 
 - Laravel 5.6 to 12
-- Guzzle 5, 6 or 7
+- Guzzle 6 or 7
 
 CI tests the package on PHP 8.1 (Laravel 10) and PHP 8.2–8.4 (Laravel 11 and 12).
 
@@ -88,7 +88,7 @@ to
 App\Http\Middleware\VerifyCsrfMiddleware::class,
 ```
 
-> You may instead keep `VerifyCsrfToken` and add the response routes to its `$except` array.
+> You may instead keep `VerifyCsrfToken` and add the response routes to its `$except` array. This needs no extra class.
 
 *Laravel 11 and above:* there is no `app/Http/Kernel.php`. Swap the middleware in `bootstrap/app.php`:
 
@@ -106,12 +106,12 @@ App\Http\Middleware\VerifyCsrfMiddleware::class,
 
 Edit `config/indipay.php`:
 
-- `gateway`: the default gateway (one of the names in the table above). Defaults to `Mocker`.
-- `testMode`: `true` sends requests to the gateway's sandbox. Set it to `false` in production.
+- `gateway`: the default gateway (one of the names in the table above). Read from `INDIPAY_GATEWAY` and defaults to `Mocker`, so set it in production. `Indipay::gateway($name)` throws an `InvalidArgumentException` for a name that is not supported (previously it silently kept the current gateway).
+- `testMode`: `true` sends requests to the gateway's sandbox. Read from `INDIPAY_TEST_MODE` and defaults to `true`, so set `INDIPAY_TEST_MODE=false` in production.
 - One block per gateway (`ccavenue`, `payumoney`, `ebs`, `citrus`, `instamojo`, `zapakpay`, `paytm`, `mocker`) for keys and return URLs. Most values read from `.env` variables, such as `INDIPAY_MERCHANT_ID`, `INDIPAY_WORKING_KEY` or `PAYTM_MERCHANT_KEY`.
 - `ebs.hashAlgorithm`: the hash algorithm your EBS payment page is set to: `md5`, `sha1` or `sha512` (case-insensitive). Read from `INDIPAY_EBS_HASH_ALGORITHM` and defaults to `md5`. It is used for both the request `secure_hash` and the response `SecureHash` check, so it must match the algorithm selected for the page in your EBS account. Any other value makes `EBSGateway` throw an `InvalidArgumentException` when it is created. If your published `config/indipay.php` predates this option, the gateway falls back to `md5`.
 - `payumoney.strictCallbackFields` and `citrus.strictCallbackFields`: when `true`, `response()` rejects a callback that leaves out a field covered by its hash. Read from `INDIPAY_STRICT_CALLBACK_FIELDS` and defaults to `false`. See the note on absent fields below. If your published `config/indipay.php` predates this option, it is off.
-- `remove_csrf_check`: routes the published middleware lets through without a CSRF token.
+- `remove_csrf_check`: routes the published middleware lets through without a CSRF token, in addition to the app's own exclusions (`$except`, or `validateCsrfTokens(except: [...])` on Laravel 11+).
 
 Return URLs are route paths, passed through Laravel's `url()` helper.
 
@@ -178,13 +178,70 @@ What `Indipay::response` checks and returns depends on the gateway:
 
 To require every signed field, set `INDIPAY_STRICT_CALLBACK_FIELDS=true` (config keys `payumoney.strictCallbackFields` and `citrus.strictCallbackFields`). A callback that leaves out any of them is then rejected with `Hash Mismatch Error`, even if the value would have been empty. A field may still be present with an empty value. The fields are `status`, `email`, `firstname`, `productinfo`, `amount`, `txnid` and `key` for PayUMoney (the unused `udf1` to `udf5` fields may be left out, as PayU does), and `TxId`, `TxStatus`, `amount`, `pgTxnNo`, `issuerRefNo`, `authIdCode`, `firstName`, `lastName`, `pgRespCode` and `addressZip` for Citrus. Turn it on only if your gateway account always sends every one of them, because empty fields that are omitted will fail the check.
 
+**InstaMojo responses must be matched to your order.** `response()` rejects (returns `false`) a callback whose `payment_request_id` or `payment_id` is not alphanumeric, then returns whatever the InstaMojo API reports for those IDs with `success: true`. It does not tie them to an order you created, or check the payment `status`. Before you fulfil an order, compare the returned `payment_request->id`, `payment_request->amount` and `payment_request->payment->status` (`Credit`) with your stored order. The `payment` object also carries the paid `amount`. These paths follow the InstaMojo 1.1 payment-request response and have not been checked against the live API.
+
 **Mocker responses are not checked.** Anyone can post fake data to your response route, since it skips CSRF checks. Confirm the payment with the gateway (for example with `verify()`) before you fulfil an order.
 
 Save the transaction details to your database before you send the user to the gateway, so you can check the payment status later.
 
+## After the response
+
+A valid hash, checksum or API reply only proves the gateway sent the data. It does not prove the data is about the order you are fulfilling. A customer can pay for a cheap order and replay its genuine callback against your response route while their session points at an expensive one. Before you mark an order paid:
+
+1. **Look up the order by the gateway's transaction or order ID** in the callback, not by anything in the session or the query string.
+2. **Compare the amount (and currency) with the amount stored for that order.** Use your own record, never a value the user could have sent.
+3. **Check the field that means "paid" for that gateway.** A genuine callback can also report a failed or pending payment.
+4. **Make fulfilment idempotent.** Accept a callback once: mark the order paid in a single atomic update and ignore repeats.
+
+Only rely on signed fields. `response()` returns every field in the request (`$request->all()`), including fields the hash does not cover and any query-string parameters added to your return URL. For PayUMoney and Citrus the signed fields are listed above.
+
+| Gateway | Order ID | Amount | Paid when |
+|---|---|---|---|
+| CCAvenue | `order_id` | `amount` | `order_status` is `Success` |
+| PayUMoney | `txnid` | `amount` | `status` is `success` |
+| Citrus | `TxId` | `amount` | `TxStatus` is `SUCCESS` |
+| Paytm | `ORDERID` | `TXNAMOUNT` | `status` is `success` |
+| EBS | `MerchantRefNo` | `Amount` | `ResponseCode` is `0` |
+| ZapakPay | `orderId` | `amount` | `responseCode` is `100` |
+| InstaMojo | `payment_request->id` | `payment->amount` | `payment->status` is `Credit` |
+| Mocker | Not checked: use `verify()` | | |
+
+The field names above are the ones the gateways document; check them against a real callback from your account. Your own order record is the source of truth for the order and the amount.
+
+InstaMojo's `response()` returns any payment request the API says exists for the IDs in the request, so its ID, amount and `payment->status` must be checked against your order as well.
+
+```php
+public function response(Request $request)
+{
+    $response = Indipay::response($request);
+
+    // PayUMoney is shown; use the fields from the table above for other gateways.
+    if (! is_array($response) || ($response['status'] ?? null) !== 'success') {
+        return redirect('/checkout')->with('error', 'Payment failed.');
+    }
+
+    DB::transaction(function () use ($response) {
+        $order = Order::where('gateway_txn_id', $response['txnid'])->lockForUpdate()->firstOrFail();
+
+        if ($order->isPaid()) {
+            return; // A repeated callback: already fulfilled.
+        }
+
+        // Compare as numbers: '100.00' equals '100'.
+        if ((float) $response['amount'] !== (float) $order->amount) {
+            abort(400, 'Amount mismatch.');
+        }
+
+        $order->markPaid();
+    });
+
+    return redirect('/thank-you');
+}
+```
+
 ## Payment Verification
 
-Paytm and Mocker can look up a payment's status, for example when it is still pending:
+Paytm and Mocker can look up a payment's status, for example when it is still pending. Calling `verify()` on any other gateway throws `Softon\Indipay\Exceptions\UnsupportedOperationException`. A custom gateway opts in by implementing `Softon\Indipay\Gateways\VerifiesPayments`:
 
 ```php
 // Paytm

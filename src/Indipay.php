@@ -1,5 +1,6 @@
 <?php namespace Softon\Indipay;
 
+use Softon\Indipay\Exceptions\UnsupportedOperationException;
 use Softon\Indipay\Gateways\CCAvenueGateway;
 use Softon\Indipay\Gateways\CitrusGateway;
 use Softon\Indipay\Gateways\EBSGateway;
@@ -8,6 +9,7 @@ use Softon\Indipay\Gateways\PaymentGatewayInterface;
 use Softon\Indipay\Gateways\PayUMoneyGateway;
 use Softon\Indipay\Gateways\MockerGateway;
 use Softon\Indipay\Gateways\PaytmGateway;
+use Softon\Indipay\Gateways\VerifiesPayments;
 use Softon\Indipay\Gateways\ZapakPayGateway;
 
 class Indipay {
@@ -41,6 +43,11 @@ class Indipay {
 
     public function verify($parameters = array())
     {
+        // is_callable() keeps custom gateways that have verify() (or proxy it via __call) but predate VerifiesPayments working.
+        if (! $this->gateway instanceof VerifiesPayments && ! is_callable([$this->gateway, 'verify'])) {
+            throw new UnsupportedOperationException(sprintf('%s does not support verify().', get_class($this->gateway)));
+        }
+
         return $this->gateway->verify($parameters);
     }
 
@@ -85,6 +92,9 @@ class Indipay {
             case 'paytm':
                 $this->gateway = new PaytmGateway();
                 break;
+
+            default:
+                throw new \InvalidArgumentException("Unknown Indipay gateway '{$name}'.");
 
         }
 
