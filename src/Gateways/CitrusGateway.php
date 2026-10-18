@@ -10,6 +10,7 @@ class CitrusGateway implements PaymentGatewayInterface {
 
     protected $parameters = array();
     protected $testMode = false;
+    protected $secretKey = '';
     protected $hash = '';
     protected $vanityUrl = '';
     protected $strictCallbackFields = false;

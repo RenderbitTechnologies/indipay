@@ -187,7 +187,6 @@ class PaytmGateway implements PaymentGatewayInterface, VerifiesPayments {
 
     function generateSalt_e($length) {
         $random = "";
-        srand((double) microtime() * 1000000);
 
         $data = "AbcDE123IJKLMN67QRSTUVWXYZ";
         $data .= "aBCdefghijklmn123opq45rs67tuv89wxyz";
