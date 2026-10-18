@@ -1,8 +1,8 @@
 @php
     $indipayNonce = isset($nonce) && $nonce ? $nonce : null;
 
-    if ($indipayNonce === null && class_exists('Illuminate\Support\Facades\Vite') && method_exists('Illuminate\Support\Facades\Vite', 'cspNonce')) {
-        $indipayNonce = \Illuminate\Support\Facades\Vite::cspNonce();
+    if ($indipayNonce === null && class_exists('Illuminate\Foundation\Vite')) {
+        $indipayNonce = app('Illuminate\Foundation\Vite')->cspNonce();
     }
 @endphp
 <!doctype html>

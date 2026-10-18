@@ -61,6 +61,27 @@ class RedirectViewTest extends TestCase
         $this->assertStringContainsString('nonce="shared1"', $html);
     }
 
+    public function test_vite_csp_nonce_is_used_when_no_nonce_is_shared()
+    {
+        if (!class_exists('Illuminate\\Foundation\\Vite')) {
+            $this->markTestSkipped('Vite is not available in this Laravel version.');
+        }
+
+        \Illuminate\Support\Facades\Vite::useCspNonce('vite-nonce');
+
+        $html = view('indipay::instamojo', ['longurl' => 'https://pg.test/pay'])->render();
+
+        $this->assertStringContainsString('<script nonce="vite-nonce">', $html);
+    }
+
+    public function test_action_is_html_escaped()
+    {
+        $html = view('indipay::instamojo', ['longurl' => 'https://pg.test/"><b>x'])->render();
+
+        $this->assertStringContainsString('action="https://pg.test/&quot;&gt;&lt;b&gt;x"', $html);
+        $this->assertStringNotContainsString('<b>x', $html);
+    }
+
     public function test_instamojo_redirects_with_get()
     {
         $html = view('indipay::instamojo', ['longurl' => 'https://pg.test/pay'])->render();
