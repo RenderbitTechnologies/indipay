@@ -29,7 +29,19 @@ A Laravel package for Indian payment gateways.
 - Laravel 5.6 to 12
 - Guzzle 6 or 7
 
-CI tests the package on PHP 8.1 (Laravel 10) and PHP 8.2–8.4 (Laravel 11 and 12).
+CI tests every Laravel release in that range, each on the oldest and newest PHP it has been verified with:
+
+| Laravel | PHP | Testbench | PHPUnit |
+|---|---|---|---|
+| 5.6, 5.7 | 7.1, 7.3 | 3.6, 3.7 | 7 |
+| 5.8 | 7.1, 7.4 | 3.8 | 7 |
+| 6 | 7.2, 8.0 | 4 | 8 |
+| 7 | 7.2, 8.0 | 5 | 8 or 9 |
+| 8 | 7.3, 8.1 | 6 | 9 |
+| 9 | 8.0, 8.3 | 7 | 9 |
+| 10 | 8.1 | 8 | 10 |
+| 11 | 8.2–8.4 | 9 | 10 or 11 |
+| 12 | 8.2–8.4 | 10 | 10 or 11 |
 
 ## Installation
 
@@ -286,6 +298,8 @@ composer test
 `composer.lock` pins Laravel 12, which needs PHP 8.2 or later. On PHP 8.1, run `composer update` instead of `composer install` to get versions that work with it.
 
 Tests use [Orchestra Testbench](https://github.com/orchestral/testbench) and make no network calls.
+
+To run the suite against Laravel 9 or older, install the matching Testbench and PHPUnit from the table under [Requirements](#requirements), run `.github/scripts/legacy-data-providers.sh` (it rewrites the tests' `#[DataProvider]` attributes, which PHPUnit before 10 ignores, so use a throwaway checkout) and run `vendor/bin/phpunit --configuration phpunit.legacy.xml`.
 
 ## License
 

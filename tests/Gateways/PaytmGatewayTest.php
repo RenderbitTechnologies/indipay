@@ -63,7 +63,7 @@ class PaytmGatewayTest extends TestCase
         $salt = (new PaytmGateway())->generateSalt_e(4);
 
         $this->assertSame(4, strlen($salt));
-        $this->assertMatchesRegularExpression('/^[A-Za-z0-9]{4}$/', $salt);
+        $this->assertPatternMatches('/^[A-Za-z0-9]{4}$/', $salt);
     }
 
     public function test_generate_salt_does_not_reseed_the_global_random_generator()

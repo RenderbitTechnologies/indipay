@@ -75,7 +75,7 @@ class PayUMoneyGatewayTest extends TestCase
         $this->assertSame('PAYU_KEY', $parameters['key']);
         $this->assertSame('http://localhost/indipay/response', $parameters['surl']);
         $this->assertSame('http://localhost/indipay/response', $parameters['furl']);
-        $this->assertMatchesRegularExpression('/^[0-9a-f]{20}$/', $parameters['txnid']);
+        $this->assertPatternMatches('/^[0-9a-f]{20}$/', $parameters['txnid']);
     }
 
     public function test_request_builds_the_payment_hash()

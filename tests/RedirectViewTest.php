@@ -40,7 +40,7 @@ class RedirectViewTest extends TestCase
         $this->assertStringNotContainsString("language='javascript'", $html);
         $this->assertStringContainsString('action="https://pg.test/pay"', $html);
         $this->assertStringContainsString("getElementById('indipay-redirect').submit()", $html);
-        $this->assertMatchesRegularExpression('#<noscript>\s*<button type="submit">Continue to payment</button>\s*</noscript>#', $html);
+        $this->assertPatternMatches('#<noscript>\s*<button type="submit">Continue to payment</button>\s*</noscript>#', $html);
         $this->assertStringNotContainsString('nonce=', $html);
     }
 

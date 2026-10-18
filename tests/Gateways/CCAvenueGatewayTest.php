@@ -50,7 +50,7 @@ class CCAvenueGatewayTest extends TestCase
 
         $encrypted = $gateway->encrypt($plain, 'secret');
 
-        $this->assertMatchesRegularExpression('/^[0-9a-f]+$/', $encrypted);
+        $this->assertPatternMatches('/^[0-9a-f]+$/', $encrypted);
         $this->assertSame(0, strlen($encrypted) % 32, 'Ciphertext should be whole AES blocks in hex');
         $this->assertSame($plain, $gateway->decrypt($encrypted, 'secret'));
     }

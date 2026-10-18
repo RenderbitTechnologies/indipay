@@ -52,7 +52,7 @@ class EBSGatewayTest extends TestCase
         $this->assertSame('5880', $parameters['account_id']);
         $this->assertSame('INR', $parameters['currency']);
         $this->assertSame('http://localhost/indipay/response', $parameters['return_url']);
-        $this->assertMatchesRegularExpression('/^[0-9a-f]{20}$/', $parameters['reference_no']);
+        $this->assertPatternMatches('/^[0-9a-f]{20}$/', $parameters['reference_no']);
     }
 
     public function test_request_builds_the_secure_hash()
